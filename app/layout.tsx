@@ -24,11 +24,17 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/app-icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/app-icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/favicon-64-v2.png", sizes: "64x64", type: "image/png" },
+      { url: "/app-icon-192-v2.png", sizes: "192x192", type: "image/png" },
+      { url: "/app-icon-512-v2.png", sizes: "512x512", type: "image/png" },
     ],
-    shortcut: "/app-icon-192.png",
-    apple: "/apple-touch-icon.png",
+    shortcut: "/app-icon-192-v2.png",
+    apple: [
+      { url: "/apple-touch-icon-v2.png", sizes: "180x180", type: "image/png" },
+    ],
+    other: [
+      { rel: "apple-touch-icon-precomposed", url: "/apple-touch-icon-v2.png", sizes: "180x180", type: "image/png" },
+    ],
   },
   manifest: "/manifest.webmanifest",
 };

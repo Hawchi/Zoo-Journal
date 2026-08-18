@@ -21,6 +21,7 @@ test("server-renders the Zoo Journal account entry", async () => {
   assert.match(html, /<title>Ons Zoo Dagboek<\/title>/i);
   assert.match(html, /Jullie dagboek wordt geopend/);
   assert.match(html, /couple-access/);
+  assert.match(html, /rel="apple-touch-icon" href="\/apple-touch-icon-v2\.png"/i);
   assert.doesNotMatch(html, /Your site is taking shape|Building your site|codex-preview/i);
 });
 
@@ -121,4 +122,18 @@ test("shows sourced animal lists and matching species photos", async () => {
   assert.match(animalsApi, /gaiazoo\.nl\/dieren/);
   assert.match(animalsApi, /zoo-leipzig\.de\/tiere-erlebniswelten\/tierlexikon/);
   assert.match(animalsApi, /Daarom verzint het dagboek geen dieren/);
+});
+
+test("publishes the red panda as the Apple home-screen icon", async () => {
+  const [layout, manifest, serviceWorker] = await Promise.all([
+    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../public/manifest.webmanifest", import.meta.url), "utf8"),
+    readFile(new URL("../public/sw.js", import.meta.url), "utf8"),
+  ]);
+  assert.match(layout, /apple-touch-icon-v2\.png/);
+  assert.match(layout, /apple-touch-icon-precomposed/);
+  assert.match(manifest, /app-icon-192-v2\.png/);
+  assert.match(manifest, /app-icon-512-v2\.png/);
+  assert.match(serviceWorker, /zoo-journal-v11/);
+  assert.match(serviceWorker, /apple-touch-icon-v2\.png/);
 });
