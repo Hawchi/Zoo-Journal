@@ -605,10 +605,8 @@ function Home({
           </div>
           <p className="description">{pick.intro}</p>
           <div className="price-row">
-            <strong>
-              €{(pick.dealPrice ?? pick.price).toFixed(2).replace(".", ",")} <small>p.p.</small>
-            </strong>
-            {pick.dealLabel && <span>♡ {pick.dealLabel}</span>}
+            <strong>Live prijs <small>op bezoekdatum</small></strong>
+            <span>✓ via officiële bron</span>
           </div>
           <div className="actions">
             <button onClick={() => open(pick.id)} className="primary">
