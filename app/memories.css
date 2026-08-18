@@ -1,0 +1,51 @@
+.memory-toolbar{max-width:1030px;margin:0 auto 20px;padding:17px 20px;border:1px solid #d9cbb5;border-radius:17px;background:#f3eadb;display:flex;justify-content:space-between;align-items:center;gap:18px}
+.memory-toolbar strong,.memory-toolbar span{display:block}.memory-toolbar strong{font:600 19px Georgia,serif;color:var(--deep)}.memory-toolbar span{margin-top:4px;color:#7c7063;font-size:13px}.memory-toolbar button{border:1px solid #728367;background:#829575;color:#fff;border-radius:12px;padding:12px 16px;font-weight:800;cursor:pointer;white-space:nowrap}
+.memory-status{max-width:1030px;margin:0 auto 16px;padding:11px 15px;border-radius:11px;background:#e4ecd9;color:#506044;font-weight:700}
+.memory-form,.memory-reader{max-width:1030px;margin:0 auto 24px;background:#fffaf1;border:1px solid #d7c6aa;border-radius:20px;padding:22px;box-shadow:0 14px 35px #725b3d1c}
+.memory-form-heading{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px}.memory-form-heading h2,.memory-reader h2{font:600 28px Georgia,serif;color:var(--deep);margin:5px 0}.memory-form-heading>button,.memory-reader-close{border:1px solid #d7c6aa;background:#f7eddd;color:#665748;border-radius:50%;width:40px;height:40px;font-size:24px;cursor:pointer}
+.memory-form-grid{display:grid;grid-template-columns:.85fr 1.15fr;gap:25px}.memory-upload{min-height:330px;border:2px dashed #cbb99e;border-radius:17px;background:#f5ecdd;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#7d6b59;cursor:pointer;overflow:hidden}.memory-upload input{position:absolute;opacity:0;pointer-events:none}.memory-upload b{font-size:40px}.memory-upload strong{font:600 20px Georgia,serif}.memory-upload small{margin-top:7px}.memory-upload img{width:100%;height:100%;min-height:330px;object-fit:cover}
+.memory-fields{display:flex;flex-direction:column;gap:12px}.memory-fields label{display:flex;flex-direction:column;gap:6px;color:#5c4e40;font-size:13px;font-weight:800}.memory-fields input,.memory-fields select,.memory-fields textarea{border:1px solid #d8cab5;border-radius:10px;background:#fffdf8;padding:11px 12px;font:inherit;color:#4c4035}.memory-fields textarea{resize:vertical}.memory-fields .primary{align-self:flex-end}
+.memory-user-photo{display:block;width:100%;height:100%;object-fit:cover}.memory-reader{position:relative;display:grid;grid-template-columns:minmax(220px,.8fr) 1.2fr;gap:24px;align-items:center}.memory-reader>img{width:100%;max-height:380px;object-fit:cover;border-radius:14px}.memory-reader p{font:16px/1.7 Georgia,serif;color:#665a4d}.memory-reader-close{position:absolute;right:14px;top:14px;z-index:2}
+@media(max-width:760px){.memory-toolbar,.memory-form,.memory-reader,.memory-status{margin-left:18px;margin-right:18px}.memory-toolbar{align-items:stretch;flex-direction:column}.memory-toolbar button{width:100%}.memory-form-grid,.memory-reader{grid-template-columns:1fr}.memory-upload{min-height:240px}.memory-upload img{min-height:240px}.memory-fields .primary{width:100%}}
+
+.memory-modal-backdrop{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:28px;background:rgba(54,43,33,.48);backdrop-filter:blur(5px);overflow-y:auto;animation:memory-fade-in .18s ease-out}
+.memory-modal{width:min(920px,100%);max-height:calc(100vh - 56px);margin:auto!important;overflow-y:auto;box-shadow:0 25px 70px rgba(57,42,28,.3);animation:memory-pop-in .26s cubic-bezier(.2,.8,.2,1)}
+.memory-form.memory-modal{padding:24px}
+.memory-reader.memory-modal{position:relative;display:grid;grid-template-columns:minmax(260px,.9fr) 1.1fr;gap:28px;align-items:stretch;padding:18px;background:#fffaf1}
+.memory-reader-visual{min-height:380px;border-radius:15px;overflow:hidden;background:#f7efdf;box-shadow:inset 0 0 0 1px #e0d0b8}
+.memory-reader-visual>img{display:block;width:100%;height:100%;max-height:520px;object-fit:cover}
+.memory-reader-visual>.zoo-photo{padding:28px;object-fit:contain}
+.memory-reader-copy{display:flex;flex-direction:column;justify-content:center;padding:30px 32px 24px 4px;min-width:0}
+.memory-reader-copy h2{font-size:34px;margin:8px 0 10px}
+.memory-reader-copy p{font:17px/1.75 Georgia,serif;color:#665a4d;white-space:pre-wrap}
+.memory-reader-close{right:12px;top:12px;box-shadow:0 4px 12px rgba(73,55,37,.15)}
+.memory{transition:transform .26s cubic-bezier(.2,.8,.2,1),box-shadow .26s ease;will-change:transform}
+.memory>div img{transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+.memory:hover{transform:translateY(-8px) rotate(0deg)!important;box-shadow:0 18px 34px rgba(89,75,56,.2)}
+.memory:hover>div img{transform:scale(1.045)}
+.memory button{transition:color .18s ease,transform .18s ease}.memory:hover>button{color:#8f5549;transform:translateX(3px)}
+.memory-clickable{position:relative;cursor:pointer;outline:none}
+.memory-clickable:focus-visible{box-shadow:0 0 0 3px #d8876c,0 18px 34px rgba(89,75,56,.2);transform:translateY(-5px) rotate(0)!important}
+.memory-card-tools{position:absolute;right:18px;top:18px;z-index:4;display:flex;gap:7px;opacity:0;transform:translateY(-4px);transition:opacity .18s ease,transform .18s ease}
+.memory:hover .memory-card-tools,.memory:focus-within .memory-card-tools{opacity:1;transform:translateY(0)}
+.memory-card-tools button{display:grid;place-items:center;width:38px;height:38px;min-height:38px!important;padding:0!important;border:1px solid rgba(197,177,148,.9)!important;border-radius:50%!important;background:rgba(255,250,241,.94)!important;color:#655445!important;font:700 20px/1 Georgia,serif!important;box-shadow:0 4px 12px rgba(77,58,39,.16);backdrop-filter:blur(4px);cursor:pointer}
+.memory-card-tools button:hover{transform:translateY(-2px)!important;background:#eef1df!important;color:#4e6047!important}
+.memory-card-tools .delete{color:#a55f53!important}.memory-card-tools .delete:hover{background:#fae8e2!important;color:#8d463b!important}
+.memory-open-hint{display:inline-block;margin-top:5px;color:#a66d63;font-size:12px;font-weight:800;transition:transform .18s ease,color .18s ease}.memory:hover .memory-open-hint{transform:translateX(3px);color:#8f5549}
+.memory-card-confirm{position:absolute;inset:12px;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:22px;border:1px solid #dfb7aa;border-radius:12px;background:rgba(255,248,241,.97);color:#714b43;box-shadow:0 12px 30px rgba(78,52,39,.22);backdrop-filter:blur(6px);cursor:default;animation:memory-pop-in .2s ease-out}
+.memory-card-confirm>strong{font:600 20px Georgia,serif}.memory-card-confirm>span{margin-top:6px;font-size:11px}.memory-card-confirm-actions{display:flex!important;gap:8px;margin-top:17px!important}.memory-card-confirm-actions button{min-height:38px!important;border:1px solid #d9b4a8!important;border-radius:9px!important;background:#fffaf5!important;color:#795048!important;padding:8px 11px!important;font-size:11px!important;font-weight:800!important;cursor:pointer}.memory-card-confirm-actions .danger{background:#a85f53!important;color:#fff!important;border-color:#a85f53!important}
+.add-memory{transition:transform .24s ease,background .24s ease,border-color .24s ease,box-shadow .24s ease}.add-memory:hover{transform:translateY(-6px);background:#f8efe1;border-color:#9fac8d;box-shadow:0 14px 28px rgba(89,75,56,.12)}.add-memory b{transition:transform .24s ease}.add-memory:hover b{transform:rotate(8deg) scale(1.08)}
+@keyframes memory-fade-in{from{opacity:0}to{opacity:1}}
+@keyframes memory-pop-in{from{opacity:0;transform:translateY(18px) scale(.975)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:760px){
+  .memory-modal-backdrop{padding:14px;align-items:start}
+  .memory-modal{max-height:calc(100dvh - 28px);margin:0!important}
+  .memory-form.memory-modal,.memory-reader.memory-modal{margin:0!important}
+  .memory-reader.memory-modal{grid-template-columns:1fr;gap:0;padding:12px}
+  .memory-reader-visual{min-height:250px;max-height:340px}
+  .memory-reader-copy{padding:24px 12px 12px}
+  .memory-reader-copy h2{font-size:28px;padding-right:32px}
+  .memory-reader-copy p{font-size:15px}
+  .memory-card-tools{opacity:1;transform:none;right:14px;top:14px}.memory-card-tools button{width:36px;height:36px;min-height:36px!important}
+}
+@media(prefers-reduced-motion:reduce){.memory-modal-backdrop,.memory-modal,.memory,.memory>div img,.add-memory,.add-memory b{animation:none!important;transition:none!important}}

@@ -1,0 +1,2 @@
+CREATE INDEX `idx_shared_trips_requested_status` ON `shared_trips` (`requested_from_user_id`,`approval_status`);--> statement-breakpoint
+CREATE INDEX `idx_shared_trips_date` ON `shared_trips` (`date`);

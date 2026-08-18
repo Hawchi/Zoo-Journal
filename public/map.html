@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Onze reiskaart</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html,body,#map{height:100%;margin:0}body{background:#dfe7d7;font-family:system-ui,sans-serif}
+    .leaflet-container{background:#dfe7d7;font-family:system-ui,sans-serif}.leaflet-tile{filter:saturate(.55) sepia(.14) brightness(1.08)}
+    .zoo-pin{width:38px;height:38px;border-radius:14px;display:grid;place-items:center;border:3px solid #fffaf1;box-shadow:0 3px 9px #513c2c55;background:#fffaf1;overflow:hidden}.zoo-pin img{display:block;width:34px;height:34px;object-fit:contain}.zoo-pin.visited{box-shadow:0 0 0 3px #df8f7b,0 3px 9px #513c2c55}.zoo-pin.wish{box-shadow:0 0 0 3px #d9aa55,0 3px 9px #513c2c55}.zoo-pin.neutral{opacity:.92}
+    .leaflet-popup-content-wrapper{border-radius:14px;background:#fffaf1;color:#4f4237}.leaflet-popup-tip{background:#fffaf1}
+    .popup-name{font:700 15px Georgia,serif;margin-bottom:3px}.popup-type{color:#8b7969;font-size:11px;margin-bottom:9px}.popup-actions{display:flex;gap:6px}.popup-actions button{border:1px solid #cdbda8;background:#fff8eb;color:#665548;border-radius:8px;padding:6px 8px;font-size:10px;cursor:pointer}.popup-actions button.active{background:#829574;color:#fff;border-color:#829574}
+    .map-filters{position:absolute;z-index:1000;left:12px;top:12px;right:58px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;pointer-events:none}.map-filters button{pointer-events:auto;border:1px solid #d6c8b2;background:#fffaf1ed;backdrop-filter:blur(8px);color:#65564a;border-radius:999px;min-height:34px;padding:7px 10px;font-size:10px;font-weight:800;box-shadow:0 3px 9px #513c2c18;cursor:pointer}.map-filters button.active{background:#718269;color:#fff;border-color:#718269}.map-filter-divider{width:1px;height:24px;background:#baa98f;opacity:.6}
+    @media(max-width:600px){.map-filters{left:7px;right:45px;top:7px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:5px;scrollbar-width:none}.map-filters::-webkit-scrollbar{display:none}.map-filters button{white-space:nowrap;min-height:32px;padding:6px 9px}.map-filter-divider{flex:0 0 1px}}
+  </style>
+</head>
+<body><div id="map"></div><div class="map-filters" aria-label="Kaartfilters"><button class="active" data-kind="all">Alles</button><button data-kind="zoo">Dierentuinen</button><button data-kind="aquarium">Aquariums</button><button data-kind="petting-zoo">Kinderboerderijen</button><span class="map-filter-divider"></span><button data-status="wish">Verlanglijst</button><button data-status="visited">Bezocht</button></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script>
+  const map=L.map('map',{zoomControl:true,scrollWheelZoom:true}).setView([51.2,7.0],5);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap'}).addTo(map);
+  let places=[
+    {id:'burgers',name:'Burgers’ Zoo',lat:51.985,lng:5.900,category:'zoo'},
+    {id:'gaia',name:'GaiaZOO',lat:50.866,lng:6.045,category:'zoo'},
+    {id:'blijdorp',name:'Diergaarde Blijdorp',lat:51.927,lng:4.449,category:'zoo'},
+    {id:'apenheul',name:'Apenheul',lat:52.216,lng:5.921,category:'zoo'},
+    {id:'antwerpen',name:'ZOO Antwerpen',lat:51.216,lng:4.421,category:'zoo'},
+    {id:'pairi',name:'Pairi Daiza',lat:50.584,lng:3.887,category:'zoo'},
+    {id:'leipzig',name:'Zoo Leipzig',lat:51.349,lng:12.373,category:'zoo'},
+    {id:'berlin',name:'Zoo Berlin',lat:52.508,lng:13.337,category:'zoo'}
+  ];
+  let wishes=['pairi','apenheul'],visitedIds=['burgers','gaia','blijdorp'],activeKind='all',activeStatus='all';
+  let layers=[];
+  const safe=(value)=>String(value).replace(/[&<>'"]/g,(character)=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[character]));
+  const stateFor=(id)=>visitedIds.includes(id)?'visited':wishes.includes(id)?'wish':'neutral';
+  const iconFile=(category)=>category==='aquarium'?'aquarium':category==='petting-zoo'?'petting-zoo':'zoo';
+  const typeLabel=(category)=>category==='aquarium'?'Aquarium':category==='petting-zoo'?'Kinderboerderij':category==='animal-park'?'Dierenpark':'Dierentuin';
+  const icon=(state,category)=>L.divIcon({className:'',html:`<div class="zoo-pin ${state}"><img src="/map-icons/${iconFile(category)}.png" alt=""></div>`,iconSize:[42,42],iconAnchor:[21,38]});
+  function popup(place){const wished=wishes.includes(place.id),visited=visitedIds.includes(place.id);return `<div class="popup-name">${safe(place.name)}</div><div class="popup-type">${typeLabel(place.category)}</div><div class="popup-actions"><button class="${wished?'active':''}" onclick="zooAction('${safe(place.id)}','wish')">${wished?'♥ Verlanglijst':'♡ Verlanglijst'}</button><button class="${visited?'active':''}" onclick="zooAction('${safe(place.id)}','visited')">${visited?'✓ Bezocht':'Ben ik geweest?'}</button></div>`}
+  function isVisible(place){const typeMatches=activeKind==='all'||place.category===activeKind||(activeKind==='zoo'&&place.category==='animal-park');const statusMatches=activeStatus==='all'||(activeStatus==='wish'&&wishes.includes(place.id))||(activeStatus==='visited'&&visitedIds.includes(place.id));return typeMatches&&statusMatches;}
+  function draw(){layers.forEach(layer=>map.removeLayer(layer));layers=[];places.filter(isVisible).forEach(place=>{const marker=L.marker([place.lat,place.lng],{icon:icon(stateFor(place.id),place.category)}).addTo(map).bindPopup(popup(place));layers.push(marker)});}
+  window.zooAction=(id,action)=>{parent.postMessage({type:'zoo-action',id,action},'*');if(action==='wish')wishes=wishes.includes(id)?wishes.filter(value=>value!==id):[...wishes,id];if(action==='visited')visitedIds=visitedIds.includes(id)?visitedIds.filter(value=>value!==id):[...visitedIds,id];draw();}
+  window.addEventListener('message',(event)=>{if(event.data?.type!=='zoo-state')return;places=event.data.places||places;wishes=event.data.wishes||[];visitedIds=event.data.visitedIds||[];draw();});
+  document.querySelectorAll('[data-kind]').forEach(button=>button.addEventListener('click',()=>{activeKind=button.dataset.kind;document.querySelectorAll('[data-kind]').forEach(item=>item.classList.toggle('active',item===button));draw();}));
+  document.querySelectorAll('[data-status]').forEach(button=>button.addEventListener('click',()=>{activeStatus=activeStatus===button.dataset.status?'all':button.dataset.status;document.querySelectorAll('[data-status]').forEach(item=>item.classList.toggle('active',item.dataset.status===activeStatus));draw();}));
+  draw();
+</script></body></html>
