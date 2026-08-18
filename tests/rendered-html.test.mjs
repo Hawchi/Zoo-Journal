@@ -57,3 +57,15 @@ test("keeps zoos, animal parks and petting zoos in separate filters", async () =
   assert.match(map, /activeKind==='all'\|\|place\.category===activeKind/);
   assert.doesNotMatch(map, /activeKind==='zoo'&&place\.category==='animal-park'/);
 });
+
+test("loads an official price when a map marker is opened", async () => {
+  const [page, map] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../public/map.html", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /website: place\.website/);
+  assert.match(map, /\/api\/prices\?zooId=/);
+  assert.match(map, /popupopen/);
+  assert.match(map, /Actuele prijs ophalen/);
+  assert.match(map, /geen gegokt bedrag/);
+});

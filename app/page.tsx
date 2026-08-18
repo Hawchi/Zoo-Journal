@@ -742,7 +742,7 @@ function JourneyMap({
   const frame = useRef<HTMLIFrameElement>(null);
   const mapPlaces = useMemo(() => places.map((place) => {
     const coords = place.latitude != null && place.longitude != null ? [place.latitude, place.longitude] : knownCoordinates[place.id];
-    return coords ? { id: place.id, name: place.name, lat: coords[0], lng: coords[1], category: place.category || "zoo" } : null;
+    return coords ? { id: place.id, name: place.name, lat: coords[0], lng: coords[1], category: place.category || "zoo", website: place.website } : null;
   }).filter(Boolean), [places]);
   const syncMap = () => frame.current?.contentWindow?.postMessage({ type: "zoo-state", places: mapPlaces, wishes, visitedIds }, "*");
 
