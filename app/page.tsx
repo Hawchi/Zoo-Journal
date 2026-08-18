@@ -8,7 +8,7 @@ import { REVIEW_STORAGE_KEY, type ReviewMap, type ReviewScores, type UserReview 
 import { MEMORY_STORAGE_KEY, type UserMemory } from "./memories";
 import { ACTIVE_PROFILE_STORAGE_KEY, COUPLE_PROFILE_STORAGE_KEY, PLANS_STORAGE_KEY, defaultCoupleProfiles, defaultPackingList, type CoupleProfile, type PlannedTrip } from "./plans";
 import { CoupleAccess, CoupleBar, CoupleSettings, type AccountMode } from "./components/CoupleAccount";
-import { CUSTOM_PLACES_KEY, DISCOVERED_PLACES_KEY, VISITED_KEY, WISHLIST_KEY, createCustomPlace, findPlaceCoordinates, knownCoordinates, loadAllAnimalPlaces } from "./place-service";
+import { CUSTOM_PLACES_KEY, DISCOVERED_PLACES_KEY, VISITED_KEY, WISHLIST_KEY, createCustomPlace, findPlaceCoordinates, knownCoordinates, loadAllAnimalPlaces, repairAnimalPlaceCategory } from "./place-service";
 import { distanceFromUser, googleMapsDirectionsUrl, wazeDirectionsUrl, type UserCoordinates } from "./route-links";
 
 type View = "home" | "explore" | "detail" | "planner" | "journey" | "rankings" | "memories" | "wishlist" | "settings";
@@ -106,7 +106,11 @@ export default function App() {
       const savedCustomPlaces = window.localStorage.getItem(CUSTOM_PLACES_KEY);
       if (savedCustomPlaces) setCustomPlaces(JSON.parse(savedCustomPlaces) as Zoo[]);
       const discoveredPlaces = window.localStorage.getItem(DISCOVERED_PLACES_KEY);
-      if (discoveredPlaces) setLoadedPlaces(JSON.parse(discoveredPlaces) as Zoo[]);
+      if (discoveredPlaces) {
+        const repairedPlaces = (JSON.parse(discoveredPlaces) as Zoo[]).map(repairAnimalPlaceCategory);
+        setLoadedPlaces(repairedPlaces);
+        window.localStorage.setItem(DISCOVERED_PLACES_KEY, JSON.stringify(repairedPlaces));
+      }
       const savedWishes = window.localStorage.getItem(WISHLIST_KEY);
       if (savedWishes) setWishes(JSON.parse(savedWishes) as string[]);
       const savedVisited = window.localStorage.getItem(VISITED_KEY);
@@ -364,7 +368,7 @@ export default function App() {
               <option value="zoo">Dierentuinen</option>
               <option value="aquarium">Aquariums</option>
               <option value="petting-zoo">Kinderboerderijen</option>
-              <option value="animal-park">Andere dierenuitjes</option>
+              <option value="animal-park">Dieren- & wildlifeparken</option>
             </select>
           </section>
           <div className="explore-result-summary" aria-live="polite">

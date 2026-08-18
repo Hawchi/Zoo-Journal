@@ -43,3 +43,17 @@ test("keeps account and shared-plan storage wired to the site", async () => {
   assert.match(schema, /sharedTrips/);
   assert.ok(migrations.some((file) => file.endsWith(".sql")));
 });
+
+test("keeps zoos, animal parks and petting zoos in separate filters", async () => {
+  const [page, places, map] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/place-service.ts", import.meta.url), "utf8"),
+    readFile(new URL("../public/map.html", import.meta.url), "utf8"),
+  ]);
+  assert.match(places, /kinderboerderij/);
+  assert.match(places, /repairAnimalPlaceCategory/);
+  assert.match(page, /\.map\(repairAnimalPlaceCategory\)/);
+  assert.match(map, /data-kind="animal-park">Dierenparken/);
+  assert.match(map, /activeKind==='all'\|\|place\.category===activeKind/);
+  assert.doesNotMatch(map, /activeKind==='zoo'&&place\.category==='animal-park'/);
+});

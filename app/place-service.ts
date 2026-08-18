@@ -13,6 +13,11 @@ export const knownCoordinates: Record<string, [number, number]> = {
 
 const animals: AnimalKey[] = ["redpanda", "elephant", "giraffe", "monkey", "tiger", "bear", "flamingo", "lion"];
 const countryNames: Record<Country, string> = { NL: "Nederland", BE: "België", DE: "Duitsland" };
+const animalParkTypes = ["wildlife_park", "safari_park", "bird_park", "butterfly_garden"];
+const pettingPlaceTerms = [
+  "kinderboerderij", "kinder-boerderij", "stadsboerderij", "dierenweide", "knuffelboerderij",
+  "petting zoo", "petting farm", "streichelzoo", "streichelgehege", "kinderbauernhof", "erlebnisbauernhof",
+];
 
 type OverpassElement = {
   type: "node" | "way" | "relation";
@@ -23,14 +28,46 @@ type OverpassElement = {
   tags?: Record<string, string>;
 };
 
+function normalizedText(values: Array<string | undefined>) {
+  return values.filter(Boolean).join(" ").toLocaleLowerCase("nl").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function looksLikePettingPlace(values: Array<string | undefined>) {
+  const text = normalizedText(values);
+  return pettingPlaceTerms.some((term) => text.includes(term));
+}
+
+function classifyPlace(tags: Record<string, string>, name: string): Zoo["category"] {
+  if (tags.tourism === "aquarium" || tags.zoo === "aquarium") return "aquarium";
+  if (tags.zoo === "petting_zoo" || looksLikePettingPlace([
+    name, tags.description, tags.operator, tags["name:nl"], tags["name:de"], tags["official_name"], tags["short_name"],
+  ])) return "petting-zoo";
+  if (animalParkTypes.includes(tags.zoo)) return "animal-park";
+  return "zoo";
+}
+
+export function repairAnimalPlaceCategory(place: Zoo): Zoo {
+  if (place.source !== "openstreetmap" || place.category === "aquarium") return place;
+  const shouldBePettingPlace = place.category === "petting-zoo" || looksLikePettingPlace([
+    place.name, place.intro, place.about, place.animalsText, ...place.highlights,
+  ]);
+  if (!shouldBePettingPlace || place.category === "petting-zoo") return place;
+  return {
+    ...place,
+    category: "petting-zoo",
+    intro: "Een kinderboerderij uit de actuele dierenplekkenlijst om samen te ontdekken.",
+    highlights: ["Kinderboerderij", ...place.highlights.filter((item) => item !== "Dierentuin").slice(0, 2)],
+    about: `${place.name} is een kinderboerderij in ${place.city}. De detailpagina vult deze kaartgegevens aan met openbare achtergrondinformatie en foto’s.`,
+  };
+}
+
 function normalizePlace(element: OverpassElement, country: Country, index: number): Zoo | null {
   const tags = element.tags || {};
   const name = tags.name || tags["name:nl"] || tags["name:de"];
   const latitude = element.lat ?? element.center?.lat;
   const longitude = element.lon ?? element.center?.lon;
   if (!name || latitude == null || longitude == null) return null;
-  const animalParkTypes = ["wildlife_park", "safari_park", "bird_park", "butterfly_garden"];
-  const category = tags.tourism === "aquarium" ? "aquarium" : tags.zoo === "petting_zoo" ? "petting-zoo" : animalParkTypes.includes(tags.zoo) ? "animal-park" : "zoo";
+  const category = classifyPlace(tags, name);
   const city = tags["addr:city"] || tags["addr:place"] || tags["is_in:city"] || countryNames[country];
   const website = tags.website || tags["contact:website"] || "";
   const address = [tags["addr:street"], tags["addr:housenumber"], tags["addr:postcode"], city].filter(Boolean).join(" ");
