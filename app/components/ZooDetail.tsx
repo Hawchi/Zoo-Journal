@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { loadAnimalMedia, loadPlaceEnrichment, type PlaceEnrichment, type PlaceMedia } from "../place-enrichment";
+import { loadAnimalMedia, loadOfficialAnimalIndex, loadPlaceEnrichment, type OfficialAnimalIndex, type PlaceEnrichment, type PlaceMedia } from "../place-enrichment";
 import { googleMapsDirectionsUrl, wazeDirectionsUrl } from "../route-links";
 import type { Rating1to5, Zoo } from "../zoo-data";
 import type { UserReview } from "../reviews";
@@ -58,8 +58,10 @@ export function ZooDetail({ zoo, wished, onWish, onBack, onPlan, review, onRevie
   const [enrichment, setEnrichment] = useState<PlaceEnrichment>({ media: [] });
   const [enrichmentLoading, setEnrichmentLoading] = useState(true);
   const [animalMedia, setAnimalMedia] = useState<PlaceMedia[]>([]);
+  const [animalIndex, setAnimalIndex] = useState<OfficialAnimalIndex | null>(null);
   const [animalsLoading, setAnimalsLoading] = useState(false);
-  const [animalMediaLoadedFor, setAnimalMediaLoadedFor] = useState("");
+  const [animalSearch, setAnimalSearch] = useState("");
+  const [showAllAnimals, setShowAllAnimals] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -69,13 +71,42 @@ export function ZooDetail({ zoo, wished, onWish, onBack, onPlan, review, onRevie
   }, [zoo.id]);
 
   useEffect(() => {
-    if (tab !== "Dieren" || !zoo.animalNames?.length || animalMediaLoadedFor === zoo.id || animalsLoading) return;
-    setAnimalMediaLoadedFor(zoo.id);
+    if (tab !== "Dieren") return;
+    let active = true;
     setAnimalsLoading(true);
-    loadAnimalMedia(zoo.animalNames).then(setAnimalMedia).finally(() => setAnimalsLoading(false));
-  }, [tab, zoo.id, zoo.animalNames, animalMediaLoadedFor, animalsLoading]);
+    setAnimalIndex(null);
+    setAnimalMedia([]);
+    setAnimalSearch("");
+    setShowAllAnimals(false);
+    loadOfficialAnimalIndex(zoo)
+      .then(async (result) => {
+        if (!active) return;
+        setAnimalIndex(result);
+        const names = result.names.length ? result.names : zoo.animalNames ?? [];
+        const media = await loadAnimalMedia(names, zoo.country);
+        if (active) setAnimalMedia(media);
+      })
+      .catch(async () => {
+        if (!active) return;
+        const names = zoo.animalNames ?? [];
+        setAnimalIndex({
+          status: names.length ? "curated" : "unavailable", zooId: zoo.id, checkedAt: new Date().toISOString(),
+          sourceName: names.length ? "Dierenhighlights in het dagboek" : "Geen dierenlijst beschikbaar", sourceUrl: zoo.website,
+          names, complete: false,
+          note: names.length ? "De officiële bron reageert nu niet. Dit zijn tijdelijk alleen de bekende highlights." : "Er kon geen betrouwbare dierenlijst worden gevonden. Daarom toont het dagboek geen gegokte dieren.",
+        });
+        const media = await loadAnimalMedia(names, zoo.country);
+        if (active) setAnimalMedia(media);
+      })
+      .finally(() => { if (active) setAnimalsLoading(false); });
+    return () => { active = false; };
+  }, [tab, zoo.id, zoo.website, zoo.country]);
 
-  const animalHighlights = zoo.animalNames?.length ? zoo.animalNames : zoo.animalsText.split(/[,.]/).map((item) => item.trim()).filter((item) => item.length > 2).slice(0, 12);
+  const animalNames = animalIndex?.names ?? zoo.animalNames ?? [];
+  const filteredAnimalNames = animalSearch.trim()
+    ? animalNames.filter((animal) => animal.toLocaleLowerCase("nl").includes(animalSearch.trim().toLocaleLowerCase("nl")))
+    : animalNames;
+  const visibleAnimalNames = showAllAnimals || animalSearch.trim() ? filteredAnimalNames : filteredAnimalNames.slice(0, 24);
   const schedule = weeklySchedule(zoo.openingHours);
   const todayIndex = (new Date().getDay() + 6) % 7;
   const todayHours = schedule[todayIndex]?.hours;
@@ -107,7 +138,14 @@ export function ZooDetail({ zoo, wished, onWish, onBack, onPlan, review, onRevie
       <div className="tab-panel">
         {tab === "Overzicht" && <div className="detail-content-grid"><article className="detail-story-card"><span className="eyebrow">WAAROM HIERHEEN?</span><h2>Alles wat je vooraf wilt weten</h2><p>{zoo.about}</p>{enrichmentLoading ? <p className="detail-loading">Informatie wordt geladen…</p> : enrichment.summary && <><p>{enrichment.summary}</p>{enrichment.summarySource && <a className="detail-source-link" href={enrichment.summarySource} target="_blank" rel="noreferrer">Bron bekijken ↗</a>}</>}</article><aside className="potential-card"><span className="eyebrow">UITJE-SCORE</span><RatingRow label="Romantisch" icon="♥" value={zoo.potential.romantic} /><RatingRow label="Dieren" icon="🐾" value={zoo.potential.animals} /><RatingRow label="Eten" icon="🍴" value={zoo.potential.food} /><RatingRow label="Reis" icon="🚗" value={zoo.potential.travel} /></aside></div>}
 
-        {tab === "Dieren" && <section className="animals-section"><div className="animals-heading"><span className="eyebrow">DIERENLIJST</span><h2>Welke dieren kun je ontmoeten?</h2><p>{zoo.animalsText}</p></div>{animalsLoading ? <div className="animal-photo-loading">Dierenfoto’s worden geladen…</div> : animalMedia.length > 0 && <div className="animal-photo-grid">{animalMedia.map((media) => <a key={media.title} href={media.sourceUrl} target="_blank" rel="noreferrer"><img src={media.thumbnailUrl} alt={media.title} loading="lazy" /><strong>{media.title}</strong></a>)}</div>}<div className="animal-name-list">{animalHighlights.map((animal) => <span key={animal}>{animal}</span>)}</div><p className="detail-freshness-note">Dit is de bekende dierenlijst in het dagboek. De samenstelling kan veranderen door verzorging, seizoen en verhuizingen.</p></section>}
+        {tab === "Dieren" && <section className="animals-section">
+          <div className="animals-heading"><span className="eyebrow">DIERENOVERZICHT</span><h2>Welke dieren kun je hier ontmoeten?</h2><p>De dierenlijst komt waar mogelijk rechtstreeks van de officiële dierenplek. De foto’s zijn afzonderlijke soortfoto’s, zodat het dier op ieder kaartje echt klopt.</p></div>
+          {animalIndex && <div className={`animal-source-card ${animalIndex.status}`}><span><i aria-hidden="true" />{animalIndex.status === "official" ? "GECONTROLEERD VIA OFFICIËLE WEBSITE" : animalIndex.status === "curated" ? "TIJDELIJKE HIGHLIGHTS" : "GEEN BETROUWBARE LIJST"}</span>{animalIndex.sourceUrl ? <a href={animalIndex.sourceUrl} target="_blank" rel="noreferrer">{animalIndex.sourceName} ↗</a> : <strong>{animalIndex.sourceName}</strong>}</div>}
+          {animalsLoading ? <div className="animal-photo-loading">Officiële dierenlijst en soortfoto’s worden geladen…</div> : animalMedia.length > 0 && <><h3 className="animal-section-title">Een paar bewoners uitgelicht</h3><div className="animal-photo-grid">{animalMedia.map((media) => <a key={media.title} href={media.sourceUrl} target="_blank" rel="noreferrer" aria-label={`${media.title}: open de bron van deze soortfoto`}><div className="animal-photo-frame"><img src={media.thumbnailUrl} alt={`Soortfoto van ${media.title}`} loading="lazy" /><span>SOORTFOTO</span></div><div className="animal-photo-caption"><strong>{media.title}</strong><small>{media.credit} ↗</small></div></a>)}</div></>}
+          {!animalsLoading && animalNames.length > 0 && <div className="animal-list-panel"><div className="animal-list-head"><div><span className="eyebrow">BEKENDE DIEREN</span><h3>{animalNames.length} {animalNames.length === 1 ? "dier" : "dieren"} gevonden</h3></div>{animalNames.length > 12 && <label className="animal-search"><span className="sr-only">Zoek in de dierenlijst</span><input type="search" value={animalSearch} onChange={(event) => setAnimalSearch(event.target.value)} placeholder="Zoek een dier…" /></label>}</div><div className="animal-name-list">{visibleAnimalNames.map((animal) => <span key={animal}>{animal}</span>)}</div>{!animalSearch && filteredAnimalNames.length > 24 && <button className="animal-show-all" onClick={() => setShowAllAnimals((current) => !current)}>{showAllAnimals ? "Toon minder" : `Toon alle ${filteredAnimalNames.length} dieren`}</button>}{animalSearch && filteredAnimalNames.length === 0 && <p className="animal-no-results">Geen dier gevonden met “{animalSearch}”.</p>}</div>}
+          {!animalsLoading && animalNames.length === 0 && <div className="animal-empty-state"><span aria-hidden="true">🐾</span><div><h3>Hier is nog geen betrouwbare dierenlijst</h3><p>De officiële website publiceert geen lijst die de app veilig kan uitlezen. We laten dit bewust leeg, zodat je geen verkeerde dieren te zien krijgt.</p>{zoo.website && <a href={zoo.website} target="_blank" rel="noreferrer">Bekijk de officiële website ↗</a>}</div></div>}
+          {animalIndex && <p className="detail-freshness-note">{animalIndex.note} Dieren kunnen door seizoen, verzorging of verhuizing tijdelijk niet zichtbaar zijn.</p>}
+        </section>}
 
         {tab === "Bezoekinfo" && <section className="visit-section">
           <div className="today-hours-card"><span className="eyebrow">VANDAAG</span><h2>{todayHours === "Niet opgegeven" ? "Geen actuele tijden beschikbaar" : `Geopend: ${todayHours}`}</h2><p>{zoo.address || `${zoo.name}, ${zoo.city}`}</p><RouteMenu zoo={zoo} /></div>

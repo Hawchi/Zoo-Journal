@@ -106,3 +106,19 @@ test("shows a live official price and verified Social Deal in the zoo hero", asy
   assert.match(deals, /status: "none"/);
   assert.match(deals, /Cache-Control.*no-store/);
 });
+
+test("shows sourced animal lists and matching species photos", async () => {
+  const [detail, enrichment, animalsApi] = await Promise.all([
+    readFile(new URL("../app/components/ZooDetail.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/place-enrichment.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/animals/route.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(detail, /GECONTROLEERD VIA OFFICIËLE WEBSITE/);
+  assert.match(detail, /Toon alle \$\{filteredAnimalNames\.length\} dieren/);
+  assert.match(detail, /Soortfoto van/);
+  assert.match(enrichment, /wikipedia\.org\/w\/api\.php/);
+  assert.match(enrichment, /loadOfficialAnimalIndex/);
+  assert.match(animalsApi, /gaiazoo\.nl\/dieren/);
+  assert.match(animalsApi, /zoo-leipzig\.de\/tiere-erlebniswelten\/tierlexikon/);
+  assert.match(animalsApi, /Daarom verzint het dagboek geen dieren/);
+});

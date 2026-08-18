@@ -13,8 +13,20 @@ export type PlaceEnrichment = {
   media: PlaceMedia[];
 };
 
+export type OfficialAnimalIndex = {
+  status: "official" | "curated" | "unavailable";
+  zooId: string;
+  checkedAt: string;
+  sourceName: string;
+  sourceUrl: string;
+  names: string[];
+  complete: boolean;
+  note: string;
+};
+
 const enrichmentCache = new Map<string, PlaceEnrichment>();
 const animalMediaCache = new Map<string, PlaceMedia | null>();
+const animalIndexCache = new Map<string, OfficialAnimalIndex>();
 
 function textOnly(value?: string) {
   if (!value) return "Wikimedia Commons";
@@ -66,32 +78,46 @@ export async function loadPlaceEnrichment(zoo: Zoo): Promise<PlaceEnrichment> {
   return enrichment;
 }
 
-async function loadOneAnimalImage(animalName: string): Promise<PlaceMedia | null> {
-  if (animalMediaCache.has(animalName)) return animalMediaCache.get(animalName) || null;
+async function loadOneAnimalImage(animalName: string, country: Zoo["country"]): Promise<PlaceMedia | null> {
+  const language = country === "DE" ? "de" : "nl";
+  const cacheKey = `${language}:${animalName.toLocaleLowerCase(language)}`;
+  if (animalMediaCache.has(cacheKey)) return animalMediaCache.get(cacheKey) || null;
   const params = new URLSearchParams({
-    action: "query", generator: "search", gsrsearch: animalName, gsrnamespace: "6", gsrlimit: "4",
-    prop: "imageinfo", iiprop: "url|mime|extmetadata", iiurlwidth: "600", format: "json", origin: "*",
+    action: "query", generator: "search", gsrsearch: `"${animalName}" ${language === "de" ? "Tier" : "dier"}`,
+    gsrnamespace: "0", gsrlimit: "5", prop: "pageimages|info", piprop: "thumbnail", pithumbsize: "720",
+    inprop: "url", format: "json", origin: "*",
   });
   try {
-    const response = await fetch(`https://commons.wikimedia.org/w/api.php?${params.toString()}`);
+    const response = await fetch(`https://${language}.wikipedia.org/w/api.php?${params.toString()}`);
     if (!response.ok) return null;
-    const payload = await response.json() as { query?: { pages?: Record<string, { title: string; imageinfo?: Array<{ thumburl?: string; url?: string; descriptionurl?: string; mime?: string; extmetadata?: { Artist?: { value?: string }; Credit?: { value?: string } } }> }> } };
-    const page = Object.values(payload.query?.pages || {}).find((item) => item.imageinfo?.[0]?.mime?.startsWith("image/"));
-    const image = page?.imageinfo?.[0];
-    const result = page && image && (image.thumburl || image.url) ? {
+    const payload = await response.json() as { query?: { pages?: Record<string, { title: string; index?: number; fullurl?: string; thumbnail?: { source?: string } }> } };
+    const page = Object.values(payload.query?.pages || {}).sort((a, b) => (a.index ?? 99) - (b.index ?? 99)).find((item) => item.thumbnail?.source && item.fullurl);
+    const result = page?.thumbnail?.source && page.fullurl ? {
       title: animalName,
-      thumbnailUrl: image.thumburl || image.url || "",
-      sourceUrl: image.descriptionurl || image.url || "",
-      credit: textOnly(image.extmetadata?.Artist?.value || image.extmetadata?.Credit?.value),
+      thumbnailUrl: page.thumbnail.source,
+      sourceUrl: page.fullurl,
+      credit: `${language === "de" ? "Wikipedia (DE)" : "Wikipedia (NL)"} — ${page.title}`,
     } : null;
-    animalMediaCache.set(animalName, result);
+    animalMediaCache.set(cacheKey, result);
     return result;
   } catch {
     return null;
   }
 }
 
-export async function loadAnimalMedia(animalNames: string[]) {
-  const results = await Promise.all(animalNames.slice(0, 8).map(loadOneAnimalImage));
+export async function loadAnimalMedia(animalNames: string[], country: Zoo["country"]) {
+  const results = await Promise.all(animalNames.slice(0, 8).map((animalName) => loadOneAnimalImage(animalName, country)));
   return results.filter((item): item is PlaceMedia => Boolean(item));
+}
+
+export async function loadOfficialAnimalIndex(zoo: Zoo): Promise<OfficialAnimalIndex> {
+  const cached = animalIndexCache.get(zoo.id);
+  if (cached) return cached;
+  const params = new URLSearchParams({ zooId: zoo.id });
+  if (zoo.website) params.set("website", zoo.website);
+  const response = await fetch(`/api/animals?${params.toString()}`);
+  if (!response.ok) throw new Error("De officiële dierenlijst kon niet worden geladen.");
+  const result = await response.json() as OfficialAnimalIndex;
+  animalIndexCache.set(zoo.id, result);
+  return result;
 }
