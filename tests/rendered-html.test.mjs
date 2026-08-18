@@ -69,3 +69,16 @@ test("loads an official price when a map marker is opened", async () => {
   assert.match(map, /Actuele prijs ophalen/);
   assert.match(map, /geen gegokt bedrag/);
 });
+
+test("shows a live official price and verified Social Deal in the zoo hero", async () => {
+  const [detail, hero, deals] = await Promise.all([
+    readFile(new URL("../app/components/ZooDetail.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/ZooHeroPrice.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/deals/route.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(detail, /<ZooHeroPrice zoo=\{zoo\}/);
+  assert.match(hero, /PRIJS VOOR MORGEN/);
+  assert.match(hero, /SOCIAL DEAL/);
+  assert.match(deals, /status: "none"/);
+  assert.match(deals, /Cache-Control.*no-store/);
+});

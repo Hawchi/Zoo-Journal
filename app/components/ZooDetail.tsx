@@ -4,6 +4,7 @@ import { googleMapsDirectionsUrl, wazeDirectionsUrl } from "../route-links";
 import type { Rating1to5, Zoo } from "../zoo-data";
 import type { UserReview } from "../reviews";
 import { LiveTicketPrices } from "./LiveTicketPrices";
+import { ZooHeroPrice } from "./ZooHeroPrice";
 import { ZooPhoto } from "./ZooPhoto";
 
 const flagEmoji: Record<string, string> = { NL: "🇳🇱", BE: "🇧🇪", DE: "🇩🇪" };
@@ -89,6 +90,7 @@ export function ZooDetail({ zoo, wished, onWish, onBack, onPlan, review, onRevie
         <div className="detail-heading"><div><span className="eyebrow">{categoryLabel}</span><h1>{zoo.name}</h1></div><button className={`heart ${wished ? "active" : ""}`} onClick={onWish} aria-label={wished ? "Verwijder van wishlist" : "Zet op wishlist"}>{wished ? "♥" : "♡"}</button></div>
         <p className="detail-location">{flagEmoji[zoo.country]} {zoo.city}, {zoo.countryName}</p>
         <div className="chip-row"><span className="chip">📍 {zoo.distance >= 999 ? "Afstand nog bepalen" : `${zoo.distance} km ${locationActive ? "vanaf jou" : "indicatie"}`}</span>{zoo.visited && <span className="chip chip-visited">✓ Bezocht</span>}</div>
+        <ZooHeroPrice zoo={zoo} />
         <p className="detail-intro">{zoo.intro}</p>
         <div className="detail-main-actions">
           <button className="primary" onClick={onPlan}>Uitje plannen</button>
