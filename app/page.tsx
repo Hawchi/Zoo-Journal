@@ -179,6 +179,11 @@ export default function App() {
   useEffect(() => { void loadCoupleAccount(); }, []);
 
   useEffect(() => {
+    const frame = window.requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: "auto" }));
+    return () => window.cancelAnimationFrame(frame);
+  }, [view, selected]);
+
+  useEffect(() => {
     if (accountMode !== "ready") return;
     const refresh = () => { void loadCoupleAccount(); void loadSharedPlans(); void loadSharedJournal(); };
     refresh();
@@ -883,17 +888,17 @@ function DashboardHome({ setView, plan, open, places, wishes, visitedIds, review
 
       <section className="dashboard-lower">
         <div className="recent-panel">
-          <div className="panel-heading"><h2>Onze bezochte dierentuinen</h2><button onClick={() => setView("memories")}>Alle herinneringen →</button></div>
-          <div className="memory-row">
+          <div className="panel-heading"><h2>Onze bezochte dierentuinen</h2>{memories.length > 0 && <button onClick={() => setView("memories")}>Alle herinneringen →</button>}</div>
+          <div className={`memory-row ${!memories.length ? "is-empty" : ""}`}>
             {memories.map((z) => <button className="memory-mini" onClick={() => open(z.id)} key={z.id}>
               <span className="memory-mini-photo"><ZooPhoto animal={z.animal} alt={z.name} /></span>
               <strong>{z.name}</strong><small>Bezocht</small>
             </button>)}
-            {!memories.length && <p className="dashboard-empty-copy">Markeer bij Dierenplekken jullie eerste bezochte locatie.</p>}
+            {!memories.length && <div className="dashboard-empty-state"><p className="dashboard-empty-copy">Markeer bij Dierenplekken jullie eerste bezochte locatie.</p><button className="soft-action" onClick={() => setView("explore")}>Ontdek dierenplekken →</button></div>}
           </div>
         </div>
         <div className="bucket-panel wishlist-home-panel">
-          <div className="panel-heading"><h2>Verlanglijst</h2><button onClick={() => setView("wishlist")}>Bekijk alles →</button></div>
+          <div className="panel-heading"><h2>Verlanglijst</h2>{wishlist.length > 0 && <button onClick={() => setView("wishlist")}>Bekijk alles →</button>}</div>
           <ul>{wishlist.slice(0, 4).map((zoo) => <li key={zoo.id}><button onClick={() => open(zoo.id)}><span>♡</span><b>{zoo.name}</b><small>{zoo.city}</small></button></li>)}</ul>
           {!wishlist.length && <p className="dashboard-empty-copy">Nog niets bewaard. Geef bij Dierenplekken een locatie een hartje.</p>}
           <button className="soft-action" onClick={() => upcoming ? plan(upcoming.id) : setView("explore")}>{upcoming ? "Plan de volgende droomdate →" : "Ontdek dierenplekken →"}</button>
