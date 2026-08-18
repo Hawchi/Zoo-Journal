@@ -2,6 +2,7 @@ import type { AnimalKey, Country, Zoo } from "./zoo-data";
 
 export const CUSTOM_PLACES_KEY = "our-zoo-journal-custom-places-v1";
 export const DISCOVERED_PLACES_KEY = "our-zoo-journal-discovered-places-v1";
+export const DISCOVERED_PLACES_REFRESHED_KEY = "our-zoo-journal-discovered-places-refreshed-v1";
 export const WISHLIST_KEY = "our-zoo-journal-wishlist-v1";
 export const VISITED_KEY = "our-zoo-journal-visited-v1";
 
@@ -109,7 +110,7 @@ async function loadCountry(country: Country): Promise<Zoo[]> {
   let data: { elements?: OverpassElement[] } | null = null;
   for (const endpoint of endpoints) {
     try {
-      const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" }, body: `data=${encodeURIComponent(query)}` });
+      const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" }, body: `data=${encodeURIComponent(query)}`, signal: AbortSignal.timeout(45000) });
       if (!response.ok) continue;
       data = await response.json() as { elements?: OverpassElement[] };
       break;
@@ -121,7 +122,7 @@ async function loadCountry(country: Country): Promise<Zoo[]> {
   return (data.elements || []).map((element, index) => normalizePlace(element, country, index)).filter((place): place is Zoo => Boolean(place));
 }
 
-export async function loadAllAnimalPlaces(): Promise<Zoo[]> {
+export async function loadAllAnimalPlacesFromMap(): Promise<Zoo[]> {
   const results = await Promise.allSettled([loadCountry("NL"), loadCountry("BE"), loadCountry("DE")]);
   const unique = new Map<string, Zoo>();
   for (const result of results) {
@@ -130,6 +131,18 @@ export async function loadAllAnimalPlaces(): Promise<Zoo[]> {
   }
   if (!unique.size) throw new Error("Geen kaartgegevens beschikbaar.");
   return [...unique.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export async function loadAllAnimalPlaces(): Promise<Zoo[]> {
+  try {
+    const response = await fetch("/api/places", { cache: "force-cache" });
+    if (!response.ok) throw new Error("De centrale dierenplekkenlijst reageert niet.");
+    const payload = await response.json() as { places?: Zoo[] };
+    if (!payload.places?.length) throw new Error("De centrale dierenplekkenlijst is leeg.");
+    return payload.places.map(repairAnimalPlaceCategory);
+  } catch {
+    return loadAllAnimalPlacesFromMap();
+  }
 }
 
 export async function findPlaceCoordinates(name: string, city: string, country: Country): Promise<{ latitude?: number; longitude?: number }> {

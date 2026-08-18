@@ -83,6 +83,24 @@ test("keeps zoos, animal parks and petting zoos in separate filters", async () =
   assert.doesNotMatch(map, /activeKind==='zoo'&&place\.category==='animal-park'/);
 });
 
+test("preloads and progressively reveals the complete animal-place list", async () => {
+  const [page, places, placesApi, appCss, plannerCss] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/place-service.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/places/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/app.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/planner.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /\["ready", "demo"\]\.includes\(accountMode\)/);
+  assert.match(page, /DISCOVERED_PLACES_REFRESHED_KEY/);
+  assert.match(page, /IntersectionObserver/);
+  assert.doesNotMatch(page, /Meer dierenplekken tonen/);
+  assert.match(places, /fetch\("\/api\/places"/);
+  assert.match(placesApi, /s-maxage=86400/);
+  assert.doesNotMatch(appCss, /overflow-wrap:anywhere/);
+  assert.match(plannerCss, /font-size:clamp\(25px,7vw,30px\)/);
+});
+
 test("loads an official price when a map marker is opened", async () => {
   const [page, map] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
@@ -134,6 +152,6 @@ test("publishes the red panda as the Apple home-screen icon", async () => {
   assert.match(layout, /apple-touch-icon-precomposed/);
   assert.match(manifest, /app-icon-192-v2\.png/);
   assert.match(manifest, /app-icon-512-v2\.png/);
-  assert.match(serviceWorker, /zoo-journal-v11/);
+  assert.match(serviceWorker, /zoo-journal-v12/);
   assert.match(serviceWorker, /apple-touch-icon-v2\.png/);
 });

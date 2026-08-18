@@ -168,10 +168,11 @@
 .review-score{display:inline-block;margin-top:10px;font:600 20px Georgia,serif;color:var(--deep)}
 
 @media(max-width:760px){
-.page-intro{margin:0 12px 25px;padding:28px 20px 28px 24px;min-height:190px;display:grid;grid-template-columns:minmax(0,1fr) 88px;gap:12px}
-.page-intro .paint-corner{min-width:0;flex:none;width:88px;height:118px;align-self:center;border-radius:18px;box-shadow:0 7px 16px #6b514220}
-.page-intro h1{font-size:clamp(32px,10vw,42px);line-height:1.02;overflow-wrap:anywhere}
-.page-intro p{margin-bottom:0;font-size:15px;line-height:1.45}
+.page-intro{margin:0 12px 22px;padding:24px 18px 24px 20px;min-height:164px;border-radius:27px;display:grid;grid-template-columns:minmax(0,1fr) 78px;gap:10px}
+.page-intro .eyebrow{display:block;max-width:100%;font-size:9px;line-height:1.35;letter-spacing:1.45px}
+.page-intro .paint-corner{min-width:0;flex:none;width:78px;height:104px;align-self:center;border-radius:17px;box-shadow:0 7px 16px #6b514220}
+.page-intro h1{max-width:100%;font-size:clamp(27px,7.8vw,35px);line-height:1;letter-spacing:-.35px;overflow-wrap:normal;word-break:normal;hyphens:none}
+.page-intro p{margin:0;font-size:13.5px;line-height:1.42}
 .filters{margin:0 18px 22px;flex-wrap:wrap}
 .search{flex-basis:100%}
 .filters select{margin-left:auto}

@@ -8,7 +8,7 @@ import { REVIEW_STORAGE_KEY, type ReviewMap, type ReviewScores, type UserReview 
 import { MEMORY_STORAGE_KEY, type UserMemory } from "./memories";
 import { ACTIVE_PROFILE_STORAGE_KEY, COUPLE_PROFILE_STORAGE_KEY, PLANS_STORAGE_KEY, defaultCoupleProfiles, defaultPackingList, type CoupleProfile, type PlannedTrip } from "./plans";
 import { CoupleAccess, CoupleBar, CoupleSettings, type AccountMode } from "./components/CoupleAccount";
-import { CUSTOM_PLACES_KEY, DISCOVERED_PLACES_KEY, VISITED_KEY, WISHLIST_KEY, createCustomPlace, findPlaceCoordinates, knownCoordinates, loadAllAnimalPlaces, repairAnimalPlaceCategory } from "./place-service";
+import { CUSTOM_PLACES_KEY, DISCOVERED_PLACES_KEY, DISCOVERED_PLACES_REFRESHED_KEY, VISITED_KEY, WISHLIST_KEY, createCustomPlace, findPlaceCoordinates, knownCoordinates, loadAllAnimalPlaces, repairAnimalPlaceCategory } from "./place-service";
 import { distanceFromUser, googleMapsDirectionsUrl, wazeDirectionsUrl, type UserCoordinates } from "./route-links";
 
 type View = "home" | "explore" | "detail" | "planner" | "journey" | "rankings" | "memories" | "wishlist" | "settings";
@@ -50,6 +50,7 @@ export default function App() {
   const [activeProfileId, setActiveProfileId] = useState(defaultCoupleProfiles[0].id);
   const [inviteCode, setInviteCode] = useState("");
   const [accountError, setAccountError] = useState("");
+  const loadMorePlacesRef = useRef<HTMLDivElement>(null);
 
   const applyAccountState = (payload: { state?: AccountMode; profile?: { userId: string }; profiles?: Array<{ userId: string; email?: string; displayName: string; role: "owner" | "partner" }>; inviteCode?: string }) => {
     if (payload.state) setAccountMode(payload.state);
@@ -237,6 +238,16 @@ export default function App() {
 
   useEffect(() => setVisiblePlaceCount(18), [country, placeType, sort, search]);
 
+  useEffect(() => {
+    const marker = loadMorePlacesRef.current;
+    if (view !== "explore" || !marker || visiblePlaceCount >= filtered.length || !("IntersectionObserver" in window)) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) setVisiblePlaceCount((count) => Math.min(count + 24, filtered.length));
+    }, { rootMargin: "500px 0px" });
+    observer.observe(marker);
+    return () => observer.disconnect();
+  }, [view, visiblePlaceCount, filtered.length]);
+
   const wish = (id: string) => setWishes((current) => {
     const next = current.includes(id) ? current.filter((value) => value !== id) : [...current, id];
     if (accountMode === "demo") window.localStorage.setItem(WISHLIST_KEY, JSON.stringify(next));
@@ -379,6 +390,7 @@ export default function App() {
       const places = await loadAllAnimalPlaces();
       setLoadedPlaces(places);
       window.localStorage.setItem(DISCOVERED_PLACES_KEY, JSON.stringify(places));
+      window.localStorage.setItem(DISCOVERED_PLACES_REFRESHED_KEY, String(Date.now()));
       setPlacesMessage(`${places.length} zoo’s en aquariums gevonden in Nederland, België en Duitsland.`);
     } catch {
       setPlacesMessage("De live kaartlijst kon nu niet worden geladen. Probeer het straks opnieuw of voeg een plek handmatig toe.");
@@ -387,10 +399,12 @@ export default function App() {
     }
   };
   useEffect(() => {
-    if (view !== "explore" || loadedPlaces.length || placesLoading) return;
-    if (window.localStorage.getItem(DISCOVERED_PLACES_KEY)) return;
+    if (!["ready", "demo"].includes(accountMode) || placesLoading) return;
+    const refreshedAt = Number(window.localStorage.getItem(DISCOVERED_PLACES_REFRESHED_KEY) || 0);
+    const freshEnough = Boolean(loadedPlaces.length) && Date.now() - refreshedAt < 7 * 24 * 60 * 60 * 1000;
+    if (freshEnough) return;
     void discoverPlaces();
-  }, [view]);
+  }, [accountMode]);
   const locateUser = () => {
     if (!("geolocation" in navigator)) {
       setLocationMessage("Je browser kan geen locatie bepalen. De routeknoppen werken wel gewoon.");
@@ -464,11 +478,7 @@ export default function App() {
             ))}
           </section>
           {filtered.length === 0 && <div className="explore-empty">Geen dierenplekken gevonden. Pas je zoekopdracht of filters aan.</div>}
-          {visiblePlaceCount < filtered.length && (
-            <button className="show-more-places" onClick={() => setVisiblePlaceCount((count) => count + 18)}>
-              Meer dierenplekken tonen
-            </button>
-          )}
+          {visiblePlaceCount < filtered.length && <div className="places-auto-load" ref={loadMorePlacesRef} role="status"><i aria-hidden="true" /> Meer dierenplekken verschijnen automatisch…</div>}
         </>
       )}
       {view === "detail" && selectedZoo && (
@@ -783,13 +793,13 @@ function PlaceDiscovery({ loading, message, placeCount, locationMessage, locatin
   };
 
   return <section className="place-discovery">
-    <div className="place-discovery-copy"><span className="eyebrow">COMPLETE LIVE LIJST</span><h2>{placeCount} zoo’s, aquariums & dierenparken</h2><p>Openbare kaartdata uit heel Nederland, België en Duitsland. De lijst wordt automatisch geladen en lokaal onthouden.</p><a className="place-data-source" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a></div>
+    <div className="place-discovery-copy"><span className="eyebrow">COMPLETE LIVE LIJST</span><h2>{loading ? "Alle dierenplekken worden klaargezet…" : `${placeCount} zoo’s, aquariums & dierenparken`}</h2><p>De volledige lijst voor Nederland, België en Duitsland wordt automatisch bij het openen van de app geladen en daarna snel vanaf dit apparaat getoond.</p><a className="place-data-source" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a></div>
     <div className="place-discovery-actions">
       <button className="location-button" onClick={onLocate} disabled={locating}>{locating ? "Locatie bepalen…" : locationActive ? "✓ Mijn locatie actief" : "⌖ Gebruik mijn locatie"}</button>
       <details className="place-manage-menu">
         <summary>Meer opties</summary>
         <div>
-          <button className="discover-button" onClick={onDiscover} disabled={loading}>{loading ? "Heel NL, BE & DE laden…" : "↻ Lijst vernieuwen"}</button>
+          <button className="discover-button" onClick={onDiscover} disabled={loading}>{loading ? "Lijst wordt bijgewerkt…" : "↻ Lijst vernieuwen"}</button>
           <button className="add-place-button" onClick={() => setAdding((value) => !value)}>＋ Zelf een plek toevoegen</button>
         </div>
       </details>

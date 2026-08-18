@@ -81,12 +81,15 @@ button.calendar-day{border:0;font:inherit;cursor:pointer}
 
 @media(max-width:760px){
   .plan-request-inbox{margin:0 18px 22px;padding:17px}.plan-request-card{grid-template-columns:60px 1fr}.plan-request-animal{width:60px;height:67px}.plan-request-actions{grid-column:1/-1}.plan-request-actions button{flex:1}.plan-request-heading h2{font-size:25px}
-  .planner-dashboard,.planner-editor{margin:0 18px 38px}
-  .planner-section-heading{align-items:flex-start;flex-direction:column;gap:14px}
-  .planner-section-heading h2{font-size:29px}
-  .planner-new-button{width:100%}
+  .planner-dashboard,.planner-editor{margin:0 16px 34px}
+  .planner-section-heading{align-items:flex-start;flex-direction:column;gap:10px;margin-bottom:15px}
+  .planner-section-heading .eyebrow{font-size:9px;letter-spacing:1.45px}
+  .planner-section-heading h2{font-size:clamp(25px,7vw,30px);line-height:1.06;letter-spacing:-.2px;overflow-wrap:normal;word-break:normal;margin:5px 0 4px}
+  .planner-section-heading p{font-size:13.5px;line-height:1.45}
+  .planner-new-button{width:100%;min-height:49px}
   .planner-overview-grid{grid-template-columns:1fr}
-  .upcoming-trips{min-height:250px}
+  .upcoming-trips{min-height:230px;padding:10px}
+  .planner-empty{padding:22px 12px}.planner-empty h3{font-size:20px}.planner-empty p{font-size:13px}
   .planned-trip-card{grid-template-columns:50px 52px minmax(0,1fr) 18px;gap:9px;padding:10px}
   .planned-trip-date{width:50px;height:54px}
   .planned-trip-date b{font-size:21px}
