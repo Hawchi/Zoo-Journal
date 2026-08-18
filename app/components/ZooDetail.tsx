@@ -156,7 +156,7 @@ export function ZooDetail({ zoo, wished, onWish, onBack, onPlan, review, onRevie
 
         {tab === "Foto’s" && <section className="media-section"><div className="media-heading"><h2>Fotoalbum van {zoo.name}</h2></div>{enrichmentLoading ? <div className="media-loading">Foto’s worden geladen…</div> : enrichment.media.length ? <div className="public-media-grid clean">{enrichment.media.map((media) => <a href={media.sourceUrl} target="_blank" rel="noreferrer" key={media.sourceUrl}><img src={media.thumbnailUrl} alt={media.title} loading="lazy" /></a>)}</div> : <div className="media-empty"><div><ZooPhoto animal={zoo.animal} alt={zoo.name} /></div><p>Nog geen passend fotoalbum beschikbaar.</p></div>}</section>}
 
-        {tab === "Beoordelingen" && <div>{review ? <article className="review-note"><strong>Jullie opgeslagen beoordeling</strong>{review.note && <p>{review.note}</p>}<span className="review-score">{review.scores.overall.toFixed(1)} / 10</span></article> : <p className="muted-note">Nog geen beoordeling — hier komt jullie mening zodra jullie zijn geweest.</p>}<button className="review-detail-button" onClick={onReview}>{review ? "Beoordeling wijzigen" : "＋ Beoordeling toevoegen"}</button></div>}
+        {tab === "Beoordelingen" && <div>{review ? <article className="review-note"><strong>Jullie opgeslagen beoordeling</strong>{review.note && <p>{review.note}</p>}<span className="review-score">{review.scores.overall.toFixed(1)} / 10</span></article> : <p className="muted-note">Nog geen beoordeling. Hier komt jullie mening zodra jullie zijn geweest.</p>}<button className="review-detail-button" onClick={onReview}>{review ? "Beoordeling wijzigen" : "＋ Beoordeling toevoegen"}</button></div>}
       </div>
     </div>
   </section>;

@@ -96,7 +96,7 @@ async function loadOneAnimalImage(animalName: string, country: Zoo["country"]): 
       title: animalName,
       thumbnailUrl: page.thumbnail.source,
       sourceUrl: page.fullurl,
-      credit: `${language === "de" ? "Wikipedia (DE)" : "Wikipedia (NL)"} — ${page.title}`,
+      credit: `${language === "de" ? "Wikipedia (DE)" : "Wikipedia (NL)"}: ${page.title}`,
     } : null;
     animalMediaCache.set(cacheKey, result);
     return result;

@@ -213,7 +213,7 @@ async function loadBerlin() {
   return {
     status: "live" as const,
     precision: "published-rate" as const,
-    prices: [price("Volwassene — Zoo", euro(adult), "from"), price("Kind — Zoo", euro(child), "from")],
+    prices: [price("Volwassene (zoo)", euro(adult), "from"), price("Kind (zoo)", euro(child), "from")],
     note: "Actuele officiële vanafprijzen. De exacte prijs wordt in de ticketkalender voor de gekozen dag berekend.",
   };
 }

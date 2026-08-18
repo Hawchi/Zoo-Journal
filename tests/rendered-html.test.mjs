@@ -152,6 +152,6 @@ test("publishes the red panda as the Apple home-screen icon", async () => {
   assert.match(layout, /apple-touch-icon-precomposed/);
   assert.match(manifest, /app-icon-192-v2\.png/);
   assert.match(manifest, /app-icon-512-v2\.png/);
-  assert.match(serviceWorker, /zoo-journal-v12/);
+  assert.match(serviceWorker, /zoo-journal-v13/);
   assert.match(serviceWorker, /apple-touch-icon-v2\.png/);
 });

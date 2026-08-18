@@ -443,7 +443,7 @@ export default function App() {
       {view === "home" && <DashboardHome setView={setView} plan={plan} open={open} places={allPlaces} wishes={wishes} visitedIds={visitedIds} reviews={reviews} onWish={wish} onVisited={toggleVisited} locationActive={Boolean(userLocation)} locating={locating} locationMessage={locationMessage} onLocate={locateUser} />}
       {view === "explore" && (
         <>
-          <PageIntro kicker="VIND ONS VOLGENDE AVONTUUR" title="Ontdek dierenplekken" text="Van dichtbij tot roadtrip — welke dieren gaan we hierna ontmoeten?" animal="monkey" />
+          <PageIntro kicker="VIND ONS VOLGENDE AVONTUUR" title="Ontdek dierenplekken" text="Van dichtbij tot roadtrip. Welke dieren gaan we hierna ontmoeten?" animal="monkey" />
           <PlaceDiscovery loading={placesLoading} message={placesMessage} placeCount={allPlaces.length} locationMessage={locationMessage} locating={locating} locationActive={Boolean(userLocation)} onLocate={locateUser} onDiscover={discoverPlaces} onAdd={addCustomPlace} />
           <section className="filters">
             <label className="search">
@@ -619,7 +619,7 @@ function Home({
             <br />
             <em>a world of animals.</em>
           </h1>
-          <p>Van eerste giraffenblik tot laatste ijsje — hier bewaren we iedere wilde date.</p>
+          <p>Van de eerste giraffenblik tot het laatste ijsje. Hier bewaren we iedere wilde date.</p>
           <button onClick={() => plan()} className="primary">
             Plan our next date <span>→</span>
           </button>

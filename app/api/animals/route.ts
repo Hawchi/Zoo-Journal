@@ -19,42 +19,42 @@ type OfficialAnimalSource = {
 
 const officialSources: Record<string, OfficialAnimalSource> = {
   burgers: {
-    name: "Burgers’ Zoo — dierenwiki",
+    name: "Burgers’ Zoo: dierenwiki",
     url: "https://www.burgerszoo.nl/wiki/dieren",
     fallback: ["leeuw", "okapi", "gorilla", "haai", "zeekoe", "aardvarken", "chimpansee", "rode panda"],
   },
   gaia: {
-    name: "GaiaZOO — dieren",
+    name: "GaiaZOO: dieren",
     url: "https://www.gaiazoo.nl/dieren/",
     fallback: ["giraffe", "witte neushoorn", "leeuw", "gorilla", "flamingo", "wolf", "rode panda", "veelvraat"],
   },
   blijdorp: {
-    name: "Diergaarde Blijdorp — dieren en planten",
+    name: "Diergaarde Blijdorp: dieren en planten",
     url: "https://diergaardeblijdorp.nl/nl/ontdek/dieren-planten",
     fallback: ["Aziatische olifant", "haai", "rog", "ijsbeer", "giraffe", "gorilla", "rode panda", "okapi"],
   },
   pairi: {
-    name: "Pairi Daiza — dierenoverzicht",
+    name: "Pairi Daiza: dierenoverzicht",
     url: "https://www.pairidaiza.eu/nl/nederland/",
     fallback: ["reuzenpanda", "koala", "olifant", "walrus", "orang-oetan", "Siberische tijger", "rode panda", "pinguïn", "ijsbeer", "gorilla", "wombat", "maraboe-ooievaar"],
   },
   antwerpen: {
-    name: "ZOO Antwerpen — parkoverzicht",
+    name: "ZOO Antwerpen: parkoverzicht",
     url: "https://www.zooantwerpen.be/nl/zoo-antwerpen/",
     fallback: ["olifant", "giraffe", "leeuw", "okapi", "gorilla", "chimpansee", "uilenkopmeerkat", "Kaapse buffel", "koala", "Goodfellowboomkangoeroe", "zwartvoetpinguïn", "zeehond"],
   },
   apenheul: {
-    name: "Apenheul — Apen-ABC",
+    name: "Apenheul: Apen-ABC",
     url: "https://www.apenheul.nl/ontdek-apenheul",
     fallback: ["gorilla", "doodshoofdaap", "orang-oetan", "bonobo", "brulaap", "maki", "neusaap", "berberaap"],
   },
   leipzig: {
-    name: "Zoo Leipzig — Tierlexikon",
+    name: "Zoo Leipzig: Tierlexikon",
     url: "https://www.zoo-leipzig.de/tiere-erlebniswelten/tierlexikon/",
     fallback: ["Mississippi-Alligator", "Rothschildgiraffe", "Sibirisches Moschustier", "Ostafrikanisches Spitzmaulnashorn", "Strahlenschildkröte", "Sumatra-Orang-Utan", "Okapi", "Schabrackentapir", "Riesenotter", "Przewalskipferd", "Scharlachsichler", "Säbelantilope"],
   },
   berlin: {
-    name: "Zoo Berlin — tierische bewoners",
+    name: "Zoo Berlin: tierische bewoners",
     url: "https://www.zoo-berlin.de/de/zoo-erleben/tiere-erlebniswelten",
     fallback: ["Afrikanischer Löwe", "Asiatischer Elefant", "Amurtiger", "Brillenpinguin", "Capybara", "Erdferkel", "Gorilla", "Großer Panda", "Jaguar", "Okapi", "Panzernashorn", "Sumatra-Orang-Utan", "Zwergflusspferd", "Zwergotter"],
   },
@@ -77,7 +77,7 @@ function decodeHtml(value: string) {
     .replace(/&#39;|&apos;/gi, "'")
     .replace(/&nbsp;|&#160;/gi, " ")
     .replace(/&ndash;|&#8211;/gi, "–")
-    .replace(/&mdash;|&#8212;/gi, "—")
+    .replace(/&mdash;|&#8212;/gi, ", ")
     .replace(/&auml;/gi, "ä")
     .replace(/&ouml;/gi, "ö")
     .replace(/&uuml;/gi, "ü")
@@ -98,7 +98,7 @@ function cleanAnimalName(value: string) {
   const cleaned = plainText(value)
     .replace(/^(image|foto|afbeelding|tier|dier)\s*:?\s*/i, "")
     .replace(/\s+(lees meer|meer informatie|bekijk)\s*$/i, "")
-    .replace(/^[•·|–—-]+|[•·|–—-]+$/g, "")
+    .replace(/^[•·|–\u2014-]+|[•·|–\u2014-]+$/g, "")
     .trim();
   if (cleaned.length < 3 || cleaned.length > 58 || cleaned.split(/\s+/).length > 6) return "";
   if (/\d|[.!?;:]|\b(?:ticket|opening|restaurant|agenda|nieuws|route|website|shop|wereld|gebied|verblijf|programma|ervaring|project)\b/i.test(cleaned)) return "";
@@ -211,7 +211,7 @@ export async function GET(request: Request) {
       status: "official",
       zooId,
       checkedAt,
-      sourceName: configured?.name ?? `${sourceUrl.hostname.replace(/^www\./, "")} — officiële dierenpagina`,
+      sourceName: configured?.name ?? `${sourceUrl.hostname.replace(/^www\./, "")}: officiële dierenpagina`,
       sourceUrl: sourceUrl.href,
       names,
       complete: false,
