@@ -44,6 +44,30 @@ test("keeps account and shared-plan storage wired to the site", async () => {
   assert.ok(migrations.some((file) => file.endsWith(".sql")));
 });
 
+test("stores the shared journal and memory photos online", async () => {
+  const [page, journalApi, journalDb, mediaApi, hosting, schema, migrations] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/journal/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/_shared/journal-db.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/media/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0002_normal_bullseye.sql", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /DATABASE_MIGRATION_KEY/);
+  assert.match(page, /loadSharedJournal/);
+  assert.match(journalApi, /requireMember/);
+  assert.match(journalDb, /shared_place_states/);
+  assert.match(journalDb, /shared_reviews/);
+  assert.match(journalDb, /shared_memories/);
+  assert.match(journalDb, /shared_custom_places/);
+  assert.match(journalDb, /mediaBucket\(\)\.put/);
+  assert.match(mediaApi, /Cache-Control/);
+  assert.match(hosting, /"r2": "MEDIA"/);
+  assert.match(schema, /sharedMemories/);
+  assert.match(migrations, /CREATE TABLE `shared_memories`/);
+});
+
 test("keeps zoos, animal parks and petting zoos in separate filters", async () => {
   const [page, places, map] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),

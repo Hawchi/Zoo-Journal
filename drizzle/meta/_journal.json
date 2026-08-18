@@ -15,6 +15,13 @@
       "when": 1787079449134,
       "tag": "0001_chemical_carnage",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1787086597551,
+      "tag": "0002_normal_bullseye",
+      "breakpoints": true
     }
   ]
 }

@@ -13,6 +13,15 @@ import { distanceFromUser, googleMapsDirectionsUrl, wazeDirectionsUrl, type User
 
 type View = "home" | "explore" | "detail" | "planner" | "journey" | "rankings" | "memories" | "wishlist" | "settings";
 const flagEmoji: Record<string, string> = { NL: "🇳🇱", BE: "🇧🇪", DE: "🇩🇪" };
+const DATABASE_MIGRATION_KEY = "our-zoo-journal-database-migration-v1";
+
+type JournalPayload = {
+  wishes: string[];
+  visitedIds: string[];
+  reviews: ReviewMap;
+  memories: UserMemory[];
+  customPlaces: Zoo[];
+};
 
 export default function App() {
   const [view, setView] = useState<View>("home");
@@ -84,6 +93,53 @@ export default function App() {
     }
   };
 
+  const applyJournalState = (payload: JournalPayload) => {
+    setWishes(payload.wishes || []);
+    setVisitedIds(payload.visitedIds || []);
+    setReviews(payload.reviews || {});
+    setUserMemories(payload.memories || []);
+    setCustomPlaces((payload.customPlaces || []).map(repairAnimalPlaceCategory));
+  };
+
+  const localJournalSnapshot = () => ({
+    wishes: JSON.parse(window.localStorage.getItem(WISHLIST_KEY) || "[]") as string[],
+    visitedIds: JSON.parse(window.localStorage.getItem(VISITED_KEY) || "[]") as string[],
+    reviews: JSON.parse(window.localStorage.getItem(REVIEW_STORAGE_KEY) || "{}") as ReviewMap,
+    memories: (JSON.parse(window.localStorage.getItem(MEMORY_STORAGE_KEY) || "[]") as UserMemory[]).filter((memory) => !memory.id.startsWith("sample-")),
+    customPlaces: JSON.parse(window.localStorage.getItem(CUSTOM_PLACES_KEY) || "[]") as Zoo[],
+  });
+
+  const loadSharedJournal = async () => {
+    try {
+      let response: Response;
+      if (!window.localStorage.getItem(DATABASE_MIGRATION_KEY)) {
+        response = await fetch("/api/journal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "import", snapshot: localJournalSnapshot() }) });
+        if (!response.ok) throw new Error("Jullie gegevens konden niet online worden gezet.");
+        const localPlans = JSON.parse(window.localStorage.getItem(PLANS_STORAGE_KEY) || "[]") as PlannedTrip[];
+        for (const trip of localPlans) {
+          const planResponse = await fetch("/api/plans", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...trip, requestApproval: false }) });
+          if (!planResponse.ok) throw new Error("Een bestaande planning kon niet online worden gezet.");
+        }
+        window.localStorage.setItem(DATABASE_MIGRATION_KEY, "done");
+      } else {
+        response = await fetch("/api/journal", { cache: "no-store" });
+      }
+      const payload = await response.json() as JournalPayload & { error?: string };
+      if (!response.ok) throw new Error(payload.error || "Jullie dagboek kon niet worden geladen.");
+      applyJournalState(payload);
+    } catch (error) {
+      setAccountError(error instanceof Error ? error.message : "Jullie dagboek kon niet worden geladen.");
+    }
+  };
+
+  const saveJournalAction = async (body: Record<string, unknown>, applyResult = false) => {
+    const response = await fetch("/api/journal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const payload = await response.json() as JournalPayload & { error?: string };
+    if (!response.ok) throw new Error(payload.error || "Online opslaan is niet gelukt.");
+    if (applyResult) applyJournalState(payload);
+    return payload;
+  };
+
   useEffect(() => {
     try {
       const cleanSlateKey = "our-zoo-journal-sample-reset-v1";
@@ -124,9 +180,9 @@ export default function App() {
 
   useEffect(() => {
     if (accountMode !== "ready") return;
-    const refresh = () => { void loadCoupleAccount(); void loadSharedPlans(); };
+    const refresh = () => { void loadCoupleAccount(); void loadSharedPlans(); void loadSharedJournal(); };
     refresh();
-    const timer = window.setInterval(() => void loadSharedPlans(), 15000);
+    const timer = window.setInterval(() => { void loadSharedPlans(); void loadSharedJournal(); }, 15000);
     window.addEventListener("focus", refresh);
     return () => { window.clearInterval(timer); window.removeEventListener("focus", refresh); };
   }, [accountMode]);
@@ -178,12 +234,14 @@ export default function App() {
 
   const wish = (id: string) => setWishes((current) => {
     const next = current.includes(id) ? current.filter((value) => value !== id) : [...current, id];
-    window.localStorage.setItem(WISHLIST_KEY, JSON.stringify(next));
+    if (accountMode === "demo") window.localStorage.setItem(WISHLIST_KEY, JSON.stringify(next));
+    else void saveJournalAction({ action: "place-state", zooId: id, wished: next.includes(id) }).catch(() => setAccountError("De wishlist kon niet online worden bijgewerkt."));
     return next;
   });
   const toggleVisited = (id: string) => setVisitedIds((current) => {
     const next = current.includes(id) ? current.filter((value) => value !== id) : [...current, id];
-    window.localStorage.setItem(VISITED_KEY, JSON.stringify(next));
+    if (accountMode === "demo") window.localStorage.setItem(VISITED_KEY, JSON.stringify(next));
+    else void saveJournalAction({ action: "place-state", zooId: id, visited: next.includes(id) }).catch(() => setAccountError("Bezocht kon niet online worden bijgewerkt."));
     return next;
   });
   const open = (id: string) => {
@@ -199,7 +257,8 @@ export default function App() {
   const saveReview = (review: UserReview) => {
     setReviews((current) => {
       const next = { ...current, [review.zooId]: review };
-      window.localStorage.setItem(REVIEW_STORAGE_KEY, JSON.stringify(next));
+      if (accountMode === "demo") window.localStorage.setItem(REVIEW_STORAGE_KEY, JSON.stringify(next));
+      else void saveJournalAction({ action: "review", review }).catch(() => setAccountError("De beoordeling kon niet online worden opgeslagen."));
       return next;
     });
   };
@@ -231,20 +290,38 @@ export default function App() {
     }
     if (id === activeProfileId) await accountAction("rename", cleanName);
   };
-  const saveMemory = (memory: UserMemory) => {
+  const saveMemory = async (memory: UserMemory) => {
     const next = [memory, ...userMemories.filter((item) => item.id !== memory.id)];
+    if (accountMode === "demo") {
+      try {
+        window.localStorage.setItem(MEMORY_STORAGE_KEY, JSON.stringify(next));
+        setUserMemories(next);
+        return true;
+      } catch { return false; }
+    }
+    const previous = userMemories;
+    setUserMemories(next);
     try {
-      window.localStorage.setItem(MEMORY_STORAGE_KEY, JSON.stringify(next));
-      setUserMemories(next);
+      await saveJournalAction({ action: "memory", memory }, true);
       return true;
-    } catch {
+    } catch (error) {
+      setUserMemories(previous);
+      setAccountError(error instanceof Error ? error.message : "De herinnering kon niet online worden opgeslagen.");
       return false;
     }
   };
   const deleteMemory = (id: string) => {
     const next = userMemories.filter((memory) => memory.id !== id);
-    window.localStorage.setItem(MEMORY_STORAGE_KEY, JSON.stringify(next));
     setUserMemories(next);
+    if (accountMode === "demo") {
+      window.localStorage.setItem(MEMORY_STORAGE_KEY, JSON.stringify(next));
+      return;
+    }
+    void fetch(`/api/journal?resource=memory&id=${encodeURIComponent(id)}`, { method: "DELETE" }).then(async (response) => {
+      const payload = await response.json() as JournalPayload & { error?: string };
+      if (!response.ok) throw new Error(payload.error || "Verwijderen is niet gelukt.");
+      applyJournalState(payload);
+    }).catch((error) => setAccountError(error instanceof Error ? error.message : "Verwijderen is niet gelukt."));
   };
   const savePlannedTrip = (trip: PlannedTrip) => {
     const existing = plannedTrips.find((item) => item.id === trip.id);
@@ -329,7 +406,8 @@ export default function App() {
   const addCustomPlace = (place: Zoo) => {
     const next = [place, ...customPlaces];
     setCustomPlaces(next);
-    window.localStorage.setItem(CUSTOM_PLACES_KEY, JSON.stringify(next));
+    if (accountMode === "demo") window.localStorage.setItem(CUSTOM_PLACES_KEY, JSON.stringify(next));
+    else void saveJournalAction({ action: "custom-place", place }).catch(() => setAccountError("De dierenplek kon niet online worden opgeslagen."));
     setPlacesMessage(`${place.name} is toegevoegd aan Dierenplekken en de kaart.`);
   };
 
@@ -916,7 +994,11 @@ function Planner({ selected, intent, places, trips, currentProfile, partnerProfi
   const draftItinerary = tripItinerary({ leave, start }, chosen);
   const sortedTrips = [...trips].sort((a, b) => a.date.localeCompare(b.date) || a.leave.localeCompare(b.leave));
   const incomingRequests = sortedTrips.filter((trip) => trip.approvalStatus === "pending" && trip.requestedFromId === currentProfile.id);
-  const profileName = (id?: string | null) => id === currentProfile.id ? currentProfile.displayName : id === partnerProfile?.id ? partnerProfile.displayName : "je partner";
+  const profileName = (id?: string | null) => {
+    if (id === currentProfile.id) return currentProfile.displayName;
+    if (partnerProfile && id === partnerProfile.id) return partnerProfile.displayName;
+    return "je partner";
+  };
 
   useEffect(() => {
     if (!selected) return;
@@ -1297,7 +1379,7 @@ function Rankings({
   );
 }
 
-function Memories({ memories, onSave, onDelete, places }: { memories: UserMemory[]; onSave: (memory: UserMemory) => boolean; onDelete: (id: string) => void; places: Zoo[] }) {
+function Memories({ memories, onSave, onDelete, places }: { memories: UserMemory[]; onSave: (memory: UserMemory) => Promise<boolean>; onDelete: (id: string) => void; places: Zoo[] }) {
   const [adding, setAdding] = useState(false);
   const [selectedMemory, setSelectedMemory] = useState<UserMemory | null>(null);
   const [zooId, setZooId] = useState(places[0].id);
@@ -1306,6 +1388,7 @@ function Memories({ memories, onSave, onDelete, places }: { memories: UserMemory
   const [note, setNote] = useState("");
   const [imageDataUrl, setImageDataUrl] = useState<string | undefined>();
   const [status, setStatus] = useState("");
+  const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
@@ -1377,18 +1460,21 @@ function Memories({ memories, onSave, onDelete, places }: { memories: UserMemory
     reader.readAsDataURL(file);
   };
 
-  const submitMemory = (event: React.FormEvent<HTMLFormElement>) => {
+  const submitMemory = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setSaving(true);
     const existing = editingId ? memories.find((memory) => memory.id === editingId) : undefined;
     const id = editingId || (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `memory-${Date.now()}`);
-    const saved = onSave({ id, zooId, date, caption: caption.trim(), note: note.trim(), imageDataUrl, createdAt: existing?.createdAt || new Date().toISOString() });
+    const wasEditing = Boolean(editingId);
+    const saved = await onSave({ id, zooId, date, caption: caption.trim(), note: note.trim(), imageDataUrl, createdAt: existing?.createdAt || new Date().toISOString() });
+    setSaving(false);
     if (!saved) {
-      setStatus("De foto is te groot om lokaal te bewaren. Probeer een kleinere foto.");
+      setStatus("Online opslaan is niet gelukt. Controleer je verbinding en probeer het opnieuw.");
       return;
     }
     setAdding(false);
     resetForm();
-    setStatus(editingId ? "Herinnering aangepast ♥" : "Herinnering opgeslagen ♥");
+    setStatus(wasEditing ? "Herinnering aangepast en online opgeslagen ♥" : "Herinnering online opgeslagen ♥");
   };
 
   return (
@@ -1413,7 +1499,7 @@ function Memories({ memories, onSave, onDelete, places }: { memories: UserMemory
                 <label>Datum<input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label>
                 <label>Titel<input required value={caption} onChange={(event) => setCaption(event.target.value)} placeholder="Bijvoorbeeld: Onze eerste rode panda" /></label>
                 <label>Jullie verhaal<textarea required rows={4} value={note} onChange={(event) => setNote(event.target.value)} placeholder="Wat maakte deze dag bijzonder?" /></label>
-                <button className="primary" type="submit">{editingId ? "Wijzigingen opslaan ♥" : "Herinnering opslaan ♥"}</button>
+                <button className="primary" type="submit" disabled={saving}>{saving ? "Online opslaan…" : editingId ? "Wijzigingen opslaan ♥" : "Herinnering opslaan ♥"}</button>
               </div>
             </div>
           </form>
