@@ -46,7 +46,7 @@ export function VisitDialog({ zoo, visit, onClose, onSave, onRemove }: {
       zooId: zoo.id,
       date,
       startPoint: startPoint.trim(),
-      kilometers: Math.max(0, Number(kilometers) || 0),
+      kilometers: Math.max(0, Number(kilometers.replace(",", ".")) || 0),
       updatedAt: new Date().toISOString(),
     });
   };
@@ -104,16 +104,16 @@ export function VisitDialog({ zoo, visit, onClose, onSave, onRemove }: {
       </header>
       <div className="visit-fields">
         <label>Datum van het bezoek<input required type="date" value={date} max={today()} onChange={(event) => setDate(event.target.value)} /></label>
-        <label>Naam van het vertrekpunt<input required value={startPoint} onChange={(event) => setStartPoint(event.target.value)} placeholder="Bijvoorbeeld: ons huis" /><small>Deze naam bewaren we bij jullie bezoek.</small></label>
+        <label>Waar vertrokken jullie?<input required value={startPoint} onChange={(event) => setStartPoint(event.target.value)} placeholder="Bijvoorbeeld: ons huis" /><small>Dit herkenbare label bewaren we bij jullie bezoek.</small></label>
         <section className="visit-route-calculator" aria-labelledby="route-calculator-title">
           <div><span className="eyebrow">AUTOMATISCH BEREKENEN</span><h3 id="route-calculator-title">Hoe ver was de autorit?</h3></div>
-          <label>Vertrekplaats voor de route<input value={originCity} onChange={(event) => { setOriginCity(event.target.value); setRouteDistance(null); setRouteError(""); }} placeholder="Bijvoorbeeld: Tilburg" /><small>Gebruik alleen een plaatsnaam, geen volledig huisadres.</small></label>
+          <label>Plaats voor de afstandsberekening<input value={originCity} onChange={(event) => { setOriginCity(event.target.value); setRouteDistance(null); setRouteError(""); }} placeholder="Bijvoorbeeld: Tilburg" /><small>Gebruik alleen een plaatsnaam, geen volledig huisadres.</small></label>
           <div className="visit-route-actions"><button type="button" className="route-calculate" disabled={routeLoading || !originCity.trim()} onClick={() => void requestDistance({ startCity: originCity.trim() })}>{routeLoading ? "Route berekenen..." : "Bereken vanaf plaats"}</button><button type="button" className="route-current" disabled={routeLoading} onClick={useCurrentLocation}>Gebruik huidige locatie</button></div>
           {routeDistance && <div className="visit-route-result" role="status"><span><small>ENKELE REIS</small><strong>{routeDistance.oneWayKm.toLocaleString("nl-NL")} km</strong></span><span><small>HEEN EN TERUG</small><strong>{routeDistance.roundTripKm.toLocaleString("nl-NL")} km</strong></span><span><small>RIJTIJD ENKEL</small><strong>{routeDistance.durationMinutes} min</strong></span><p>De retourafstand is hieronder automatisch ingevuld. Start gevonden als {routeDistance.startLabel}.</p></div>}
           {routeError && <p className="visit-route-error" role="alert">{routeError}</p>}
           <p className="visit-route-privacy">Plaatszoeken gebeurt alleen na jouw tik via <a href="https://operations.osmfoundation.org/policies/nominatim/" target="_blank" rel="noreferrer">OpenStreetMap Nominatim</a>. De autoroute wordt berekend door <a href="https://project-osrm.org/" target="_blank" rel="noreferrer">OSRM</a>. Coördinaten worden niet in jullie dagboek opgeslagen.</p>
         </section>
-        <label>Gereden kilometers in totaal<input required type="number" min="0" step="1" inputMode="numeric" value={kilometers} onChange={(event) => setKilometers(event.target.value)} placeholder="Bijvoorbeeld: 168" /><small>Vul de heen- en terugreis samen in. Zo blijft de teller eerlijk.</small></label>
+        <label>Gereden kilometers in totaal<input required type="number" min="0" step="0.1" inputMode="decimal" value={kilometers} onChange={(event) => setKilometers(event.target.value)} placeholder="Bijvoorbeeld: 168,5" /><small>Decimalen zijn toegestaan. Vul de heen- en terugreis samen in.</small></label>
       </div>
       <footer className="visit-modal-actions">
         {visit && (confirmRemove ? <span className="visit-remove-confirm"><b>Bezoek verwijderen?</b><button type="button" onClick={() => setConfirmRemove(false)}>Nee</button><button type="button" className="danger" onClick={onRemove}>Ja</button></span> : <button type="button" className="visit-remove" onClick={() => setConfirmRemove(true)}>Niet meer als bezocht markeren</button>)}

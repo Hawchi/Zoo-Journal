@@ -526,6 +526,8 @@ export default function App() {
           onWish={() => wish(selectedZoo.id)}
           onBack={() => setView("explore")}
           onPlan={() => plan(selectedZoo.id)}
+          onVisit={() => openVisit(selectedZoo.id)}
+          visit={visits[selectedZoo.id]}
           reviews={reviews[selectedZoo.id] || []}
           currentProfile={activeProfile}
           profiles={profiles}
@@ -546,7 +548,7 @@ export default function App() {
           profiles={profiles}
         />
       )}
-      {view === "memories" && <Memories memories={userMemories} onSave={saveMemory} onDelete={deleteMemory} places={allPlaces} visitedIds={visitedIds} visits={visits} />}
+      {view === "memories" && <Memories memories={userMemories} onSave={saveMemory} onDelete={deleteMemory} places={allPlaces} visitedIds={visitedIds} visits={visits} onEditVisit={openVisit} onOpenPlace={open} />}
       {view === "wishlist" && (
         <>
           <PageIntro kicker="BEWAARD VOOR LATER" title="Onze wishlist" text={`${wishes.length} wilde dates om samen van te dromen.`} animal="redpanda" />
@@ -574,7 +576,7 @@ function UiIcon({ name }: { name: string }) {
 function Sidebar({ view, go }: { view: View; go: (view: View) => void }) {
   const items: [View, string, string][] = [
     ["home", "home", "Start"], ["explore", "paw", "Dierenplekken"], ["planner", "calendar", "Agenda"],
-    ["journey", "map", "Reiskaart"], ["rankings", "trophy", "Ranglijst"], ["memories", "camera", "Herinneringen"],
+    ["journey", "map", "Reiskaart"], ["rankings", "trophy", "Ranglijst"], ["memories", "camera", "Dagboek"],
     ["wishlist", "heart", "Verlanglijst"], ["settings", "settings", "Instellingen"],
   ];
   return (
@@ -906,6 +908,7 @@ function JourneyMap({
 }
 
 function DashboardHome({ setView, plan, open, places, wishes, visitedIds, visits, reviews, onWish, onVisited, locationActive, locating, locationMessage, onLocate }: { setView: (v: View) => void; plan: (id?: string) => void; open: (id: string) => void; places: Zoo[]; wishes: string[]; visitedIds: string[]; visits: VisitMap; reviews: ReviewMap; onWish: (id: string) => void; onVisited: (id: string) => void; locationActive: boolean; locating: boolean; locationMessage: string; onLocate: () => void }) {
+  const [noteMinimized, setNoteMinimized] = useState(false);
   const visited = places.filter((zoo) => visitedIds.includes(zoo.id));
   const wishlist = places.filter((zoo) => wishes.includes(zoo.id));
   const homePlaces = places.filter((zoo) => visitedIds.includes(zoo.id) || wishes.includes(zoo.id));
@@ -932,7 +935,8 @@ function DashboardHome({ setView, plan, open, places, wishes, visitedIds, visits
 
       <section className="dashboard-map-card">
         <JourneyMap compact places={homePlaces} wishes={wishes} visitedIds={visitedIds} onWish={onWish} onVisited={onVisited} />
-        {upcoming && <button className="next-adventure-note" onClick={() => open(upcoming.id)}>
+        {upcoming && <button className={`next-note-toggle ${noteMinimized ? "minimized" : ""}`} onClick={() => setNoteMinimized((current) => !current)} aria-label={noteMinimized ? "Toon de volgende droomdate" : "Verberg de volgende droomdate"} aria-expanded={!noteMinimized}>{noteMinimized ? "+" : "−"}</button>}
+        {upcoming && !noteMinimized && <button className="next-adventure-note" onClick={() => open(upcoming.id)}>
           <span className="eyebrow">VOLGENDE DROOMDATE</span><strong>{upcoming.name}</strong>
           <small>{upcoming.countryName}<br />{upcoming.distance >= 999 ? "afstand onbekend" : `${upcoming.distance} km`}</small>
           <ZooPhoto animal={upcoming.animal} alt="" />
@@ -941,12 +945,12 @@ function DashboardHome({ setView, plan, open, places, wishes, visitedIds, visits
 
       <section className="dashboard-lower">
         <div className="recent-panel">
-          <div className="panel-heading"><h2>Onze bezochte dierentuinen</h2>{memories.length > 0 && <button onClick={() => setView("memories")}>Alle herinneringen →</button>}</div>
+          <div className="panel-heading"><h2>Onze bezochte dierenplekken</h2>{memories.length > 0 && <button onClick={() => setView("memories")}>Open dagboek →</button>}</div>
           <div className={`memory-row ${!memories.length ? "is-empty" : ""}`}>
-            {memories.map((z) => <button className="memory-mini" onClick={() => open(z.id)} key={z.id}>
+            {memories.map((z) => { const visit = visits[z.id]; return <button className="memory-mini" onClick={() => onVisited(z.id)} key={z.id}>
               <span className="memory-mini-photo"><ZooPhoto animal={z.animal} alt={z.name} /></span>
-              <strong>{z.name}</strong><small>Bezocht</small>
-            </button>)}
+              <strong>{z.name}</strong><small>{visit ? `${new Date(`${visit.date}T12:00:00`).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })} · ${visit.kilometers.toLocaleString("nl-NL")} km` : "Bezoekgegevens aanvullen"}</small>
+            </button>; })}
             {!memories.length && <div className="dashboard-empty-state"><p className="dashboard-empty-copy">Markeer bij Dierenplekken jullie eerste bezochte locatie.</p><button className="soft-action" onClick={() => setView("explore")}>Ontdek dierenplekken →</button></div>}
           </div>
         </div>
@@ -1454,7 +1458,8 @@ function Rankings({
   );
 }
 
-function Memories({ memories, onSave, onDelete, places, visitedIds, visits }: { memories: UserMemory[]; onSave: (memory: UserMemory) => Promise<boolean>; onDelete: (id: string) => void; places: Zoo[]; visitedIds: string[]; visits: VisitMap }) {
+function Memories({ memories, onSave, onDelete, places, visitedIds, visits, onEditVisit, onOpenPlace }: { memories: UserMemory[]; onSave: (memory: UserMemory) => Promise<boolean>; onDelete: (id: string) => void; places: Zoo[]; visitedIds: string[]; visits: VisitMap; onEditVisit: (id: string) => void; onOpenPlace: (id: string) => void }) {
+  const [journalTab, setJournalTab] = useState<"memories" | "visits">("memories");
   const [adding, setAdding] = useState(false);
   const [selectedMemory, setSelectedMemory] = useState<UserMemory | null>(null);
   const [zooId, setZooId] = useState(places[0].id);
@@ -1510,6 +1515,9 @@ function Memories({ memories, onSave, onDelete, places, visitedIds, visits }: { 
   };
   const openAddMemory = () => {
     resetForm(); setSelectedMemory(null); setStatus(""); setAdding(true);
+  };
+  const openAddMemoryForPlace = (place: Zoo) => {
+    setJournalTab("memories"); setEditingId(null); setZooId(place.id); setPlaceQuery(place.name); setPlacePickerOpen(false); setPlaceError(""); setDate(visits[place.id]?.date || ""); setCaption(""); setNote(""); setImageDataUrl(undefined); setSelectedMemory(null); setStatus(""); setAdding(true);
   };
   const editMemory = (memory: UserMemory) => {
     const memoryPlace = places.find((place) => place.id === memory.zooId);
@@ -1588,7 +1596,24 @@ function Memories({ memories, onSave, onDelete, places, visitedIds, visits }: { 
 
   return (
     <>
-      <PageIntro kicker="ONS WILDE KLEINE ARCHIEF" title="Herinneringen" text="De momenten die we nooit kwijt willen." animal="flamingo" />
+      <PageIntro kicker="ONS WILDE KLEINE ARCHIEF" title="Ons dagboek" text="Alle bezoeken en herinneringen op één duidelijke plek." animal="flamingo" />
+      <section className="journal-tabs" role="tablist" aria-label="Dagboek onderdelen">
+        <button role="tab" aria-selected={journalTab === "memories"} className={journalTab === "memories" ? "active" : ""} onClick={() => setJournalTab("memories")}><strong>Herinneringen</strong><span>{memories.length} bewaard</span></button>
+        <button role="tab" aria-selected={journalTab === "visits"} className={journalTab === "visits" ? "active" : ""} onClick={() => setJournalTab("visits")}><strong>Bezoeken</strong><span>{visitedPlaceOptions.length} geregistreerd</span></button>
+      </section>
+      {journalTab === "visits" && <section className="visit-journal" aria-label="Geregistreerde bezoeken">
+        {visitedIds.length > 0 ? <div className="visit-journal-grid">{visitedPlaceOptions.map((place) => {
+          const visit = visits[place.id];
+          return <article className="visit-journal-card" key={place.id}>
+            <button className="visit-journal-photo" onClick={() => onOpenPlace(place.id)} aria-label={`Open ${place.name}`}><ZooPhoto animal={place.animal} alt={place.name} /></button>
+            <div className="visit-journal-copy"><span className="eyebrow">BEZOCHTE DIERENPLEK</span><h2>{place.name}</h2><p>{place.city}, {place.countryName}</p>
+              {visit ? <dl><div><dt>Datum</dt><dd>{new Date(`${visit.date}T12:00:00`).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" })}</dd></div><div><dt>Vertrekpunt</dt><dd>{visit.startPoint}</dd></div><div><dt>Gereden</dt><dd>{visit.kilometers.toLocaleString("nl-NL")} km</dd></div></dl> : <p className="visit-journal-missing">Vul de datum, het vertrekpunt en de kilometers nog aan.</p>}
+              <div className="visit-journal-actions"><button className="primary" onClick={() => onEditVisit(place.id)}>{visit ? "Bezoek bekijken of wijzigen" : "Bezoekgegevens invullen"}</button><button onClick={() => openAddMemoryForPlace(place)}>Herinnering toevoegen</button><button onClick={() => onOpenPlace(place.id)}>Dierenplek openen</button></div>
+            </div>
+          </article>;
+        })}</div> : <div className="visit-journal-empty"><strong>Nog geen bezoeken geregistreerd</strong><p>Open een dierenplek en kies daar Bezoek registreren. Daarna verschijnt de volledige rit hier.</p></div>}
+      </section>}
+      {journalTab === "memories" && <>
       <section className="memory-toolbar">
         <div><strong>Jullie eigen fotoalbum</strong><span>Bewaar een foto, datum en verhaal bij iedere dierendate.</span></div>
         <button onClick={openAddMemory}>＋ Herinnering toevoegen</button>
@@ -1662,6 +1687,7 @@ function Memories({ memories, onSave, onDelete, places, visitedIds, visits }: { 
           <span>Foto&rsquo;s en jullie beoordeling</span>
         </button>
       </section>
+      </>}
     </>
   );
 }
@@ -1673,7 +1699,7 @@ function Nav({ view, go }: { view: View; go: (v: View) => void }) {
     ["planner", "calendar", "Plannen"],
     ["journey", "map", "Kaart"],
     ["rankings", "trophy", "Ranglijst"],
-    ["memories", "camera", "Foto’s"],
+    ["memories", "camera", "Dagboek"],
   ];
   return (
     <nav className="bottom-nav" aria-label="Hoofdnavigatie">

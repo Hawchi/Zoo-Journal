@@ -35,8 +35,8 @@ export async function GET(request: Request) {
     return Response.json({ status: "unavailable", message: "Kies eerst een geldige datum en dierenplek." }, { status: 400 });
   }
 
-  const today = new Date();
-  today.setUTCHours(0, 0, 0, 0);
+  const todayValue = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Amsterdam", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const today = new Date(`${todayValue}T00:00:00Z`);
   const target = new Date(`${date}T00:00:00Z`);
   const daysAway = Math.round((target.getTime() - today.getTime()) / 86_400_000);
   if (daysAway < 0) return Response.json({ status: "past", message: "Voor een afgelopen bezoek tonen we geen weersvoorspelling." });
@@ -48,22 +48,25 @@ export async function GET(request: Request) {
 
   try {
     const query = new URLSearchParams({
-      latitude: String(latitude), longitude: String(longitude), timezone: "auto", start_date: date, end_date: date,
+      latitude: String(latitude), longitude: String(longitude), timezone: "auto", forecast_days: "16",
       daily: "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max",
     });
-    const response = await fetch(`https://api.open-meteo.com/v1/forecast?${query}`, { signal: AbortSignal.timeout(10000) });
+    let response = await fetch(`https://api.open-meteo.com/v1/forecast?${query}`, { signal: AbortSignal.timeout(10000) });
+    if (!response.ok) response = await fetch(`https://api.open-meteo.com/v1/forecast?${query}`, { signal: AbortSignal.timeout(10000) });
     if (!response.ok) throw new Error("Weerbron reageert niet.");
-    const data = await response.json() as { daily?: { weather_code?: number[]; temperature_2m_max?: number[]; temperature_2m_min?: number[]; precipitation_probability_max?: number[] } };
-    const code = Number(data.daily?.weather_code?.[0]);
+    const data = await response.json() as { daily?: { time?: string[]; weather_code?: number[]; temperature_2m_max?: number[]; temperature_2m_min?: number[]; precipitation_probability_max?: number[] } };
+    const dayIndex = data.daily?.time?.indexOf(date) ?? -1;
+    if (dayIndex < 0) throw new Error("Datum ontbreekt in de voorspelling.");
+    const code = Number(data.daily?.weather_code?.[dayIndex]);
     const description = weatherLabels[code] || { label: "Wisselend weer", kind: "cloud" };
     return Response.json({
       status: "forecast",
       date,
       label: description.label,
       kind: description.kind,
-      minimum: data.daily?.temperature_2m_min?.[0],
-      maximum: data.daily?.temperature_2m_max?.[0],
-      rainChance: data.daily?.precipitation_probability_max?.[0],
+      minimum: data.daily?.temperature_2m_min?.[dayIndex],
+      maximum: data.daily?.temperature_2m_max?.[dayIndex],
+      rainChance: data.daily?.precipitation_probability_max?.[dayIndex],
       source: "Open-Meteo",
       checkedAt: new Date().toISOString(),
     }, { headers: { "Cache-Control": "public, max-age=900, s-maxage=1800" } });

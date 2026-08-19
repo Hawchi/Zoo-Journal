@@ -20,6 +20,7 @@ function shortDate(value?: string) {
 
 export function TripWeather({ zoo, date, compact = false }: { zoo: Zoo; date: string; compact?: boolean }) {
   const [weather, setWeather] = useState<WeatherPayload>({ status: "loading" });
+  const [refreshKey, setRefreshKey] = useState(0);
   const latitude = zoo.latitude ?? knownCoordinates[zoo.id]?.[0];
   const longitude = zoo.longitude ?? knownCoordinates[zoo.id]?.[1];
   const canLoad = Boolean(latitude && longitude && date);
@@ -35,9 +36,9 @@ export function TripWeather({ zoo, date, compact = false }: { zoo: Zoo; date: st
         .catch(() => { if (active) setWeather({ status: "unavailable", message: "Het actuele weer kon nu niet worden opgehaald." }); });
     }, 250);
     return () => { active = false; window.clearTimeout(timer); };
-  }, [latitude, longitude, date, canLoad]);
+  }, [latitude, longitude, date, canLoad, refreshKey]);
 
-  const visibleWeather = canLoad ? weather : { status: "unavailable", message: "Kies een locatie en datum voor het weer." } satisfies WeatherPayload;
+  const visibleWeather = canLoad ? weather : { status: "unavailable", message: !date ? "Kies eerst een datum voor jullie uitje." : "Voor deze dierenplek ontbreken nog kaartcoördinaten." } satisfies WeatherPayload;
 
   return <aside className={`trip-weather ${compact ? "compact" : ""}`} aria-live="polite">
     <span className={`weather-mark ${visibleWeather.kind || "cloud"}`} aria-hidden="true"><i /></span>
@@ -45,7 +46,8 @@ export function TripWeather({ zoo, date, compact = false }: { zoo: Zoo; date: st
       {visibleWeather.status === "loading" && <><strong>Voorspelling ophalen…</strong><p>Even de locatie en datum controleren.</p></>}
       {visibleWeather.status === "forecast" && <><strong>{Math.round(visibleWeather.maximum || 0)}° / {Math.round(visibleWeather.minimum || 0)}° · {visibleWeather.label}</strong><p>{visibleWeather.rainChance ?? 0}% kans op neerslag. Ververs bij het openen automatisch.</p></>}
       {visibleWeather.status === "too-early" && <><strong>Nog te vroeg voor een voorspelling</strong><p>Het live weer verschijnt vanaf {shortDate(visibleWeather.availableFrom)}.</p></>}
-      {(visibleWeather.status === "past" || visibleWeather.status === "unavailable") && <><strong>Geen voorspelling beschikbaar</strong><p>{visibleWeather.message}</p></>}
+      {visibleWeather.status === "past" && <><strong>Dit bezoek is al geweest</strong><p>{visibleWeather.message}</p></>}
+      {visibleWeather.status === "unavailable" && <><strong>Het weer is tijdelijk niet bereikbaar</strong><p>{visibleWeather.message}</p>{canLoad && <button type="button" className="weather-retry" onClick={() => setRefreshKey((value) => value + 1)}>Opnieuw proberen</button>}</>}
     </div>
   </aside>;
 }

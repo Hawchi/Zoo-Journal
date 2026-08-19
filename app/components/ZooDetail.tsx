@@ -4,6 +4,7 @@ import { googleMapsDirectionsUrl, wazeDirectionsUrl } from "../route-links";
 import type { Rating1to5, Zoo } from "../zoo-data";
 import { averageReviewScores, reviewForUser, type UserReview } from "../reviews";
 import type { CoupleProfile } from "../plans";
+import type { ZooVisit } from "../visits";
 import { LiveTicketPrices } from "./LiveTicketPrices";
 import { ZooHeroPrice } from "./ZooHeroPrice";
 import { ZooPhoto } from "./ZooPhoto";
@@ -46,12 +47,14 @@ function RouteMenu({ zoo }: { zoo: Zoo }) {
   </details>;
 }
 
-export function ZooDetail({ zoo, wished, onWish, onBack, onPlan, reviews, currentProfile, profiles, onReview, locationActive }: {
+export function ZooDetail({ zoo, wished, onWish, onBack, onPlan, onVisit, visit, reviews, currentProfile, profiles, onReview, locationActive }: {
   zoo: Zoo;
   wished: boolean;
   onWish: () => void;
   onBack: () => void;
   onPlan: () => void;
+  onVisit: () => void;
+  visit?: ZooVisit;
   reviews: UserReview[];
   currentProfile: CoupleProfile;
   profiles: CoupleProfile[];
@@ -140,7 +143,7 @@ export function ZooDetail({ zoo, wished, onWish, onBack, onPlan, reviews, curren
       <div className="detail-copy">
         <div className="detail-heading"><div><span className="eyebrow">{categoryLabel}</span><h1>{zoo.name}</h1></div><button className={`heart ${wished ? "active" : ""}`} onClick={onWish} aria-label={wished ? "Verwijder van wishlist" : "Zet op wishlist"}>{wished ? "♥" : "♡"}</button></div>
         <p className="detail-location">{flagEmoji[zoo.country]} {zoo.city}, {zoo.countryName}</p>
-        <div className="chip-row"><span className="chip">📍 {zoo.distance >= 999 ? "Afstand nog bepalen" : `${zoo.distance} km ${locationActive ? "vanaf jou" : "indicatie"}`}</span>{zoo.visited && <span className="chip chip-visited">✓ Bezocht</span>}</div>
+        <div className="chip-row"><span className="chip">📍 {zoo.distance >= 999 ? "Afstand nog bepalen" : `${zoo.distance} km ${locationActive ? "vanaf jou" : "indicatie"}`}</span><button className={`chip detail-visit-chip ${visit ? "chip-visited" : "chip-register"}`} onClick={onVisit}>{visit ? <>Bezocht op {new Date(`${visit.date}T12:00:00`).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}<small>{visit.kilometers.toLocaleString("nl-NL")} km geregistreerd</small></> : zoo.visited ? "Bezoekgegevens aanvullen" : "Bezoek registreren"}</button></div>
         <ZooHeroPrice zoo={zoo} />
         <p className="detail-intro">{zoo.intro}</p>
         <div className="detail-main-actions">

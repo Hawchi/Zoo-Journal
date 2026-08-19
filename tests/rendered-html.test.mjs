@@ -89,15 +89,38 @@ test("keeps the mobile journal responsive and makes visits useful", async () => 
   assert.match(page, /<TripWeather/);
   assert.match(page, /useState\(Boolean\(partnerProfile\)\)/);
   assert.match(visitDialog, /Datum van het bezoek/);
-  assert.match(visitDialog, /Naam van het vertrekpunt/);
+  assert.match(visitDialog, /Waar vertrokken jullie\?/);
   assert.match(visitDialog, /Gereden kilometers in totaal/);
+  assert.match(visitDialog, /step="0\.1"/);
+  assert.match(visitDialog, /inputMode="decimal"/);
   assert.match(weather, /api\.open-meteo\.com/);
+  assert.match(weather, /forecast_days: "16"/);
   assert.match(hours, /openingHoursSpecification/);
   assert.match(hours, /google\.com\/search/);
   assert.match(globals, /grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/);
   assert.match(planner, /\.trip-weather/);
   assert.match(memories, /\.memory-modal/);
   assert.match(reviews, /\.rankings-tabs/);
+});
+
+test("connects registered visits to place details and the mobile journal", async () => {
+  const [page, detail, memoriesCss, dashboardCss, weatherWidget] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/ZooDetail.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/memories.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/dashboard.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/TripWeather.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(detail, /Bezoek registreren/);
+  assert.match(detail, /kilometers\.toLocaleString\("nl-NL"\)/);
+  assert.match(page, /title="Ons dagboek"/);
+  assert.match(page, /Bezoek bekijken of wijzigen/);
+  assert.match(page, /Vertrekpunt/);
+  assert.match(page, /\["memories", "camera", "Dagboek"\]/);
+  assert.match(page, /next-note-toggle/);
+  assert.match(memoriesCss, /\.visit-journal-card/);
+  assert.match(dashboardCss, /\.next-note-toggle/);
+  assert.match(weatherWidget, /Opnieuw proberen/);
 });
 
 test("calculates a privacy-conscious driving distance for registered visits", async () => {
@@ -240,6 +263,6 @@ test("publishes the red panda as the Apple home-screen icon", async () => {
   assert.match(layout, /apple-touch-icon-precomposed/);
   assert.match(manifest, /app-icon-192-v2\.png/);
   assert.match(manifest, /app-icon-512-v2\.png/);
-  assert.match(serviceWorker, /zoo-journal-v17/);
+  assert.match(serviceWorker, /zoo-journal-v18/);
   assert.match(serviceWorker, /apple-touch-icon-v2\.png/);
 });
