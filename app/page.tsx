@@ -6,7 +6,7 @@ import { ZooDetail } from "./components/ZooDetail";
 import { ZooPhoto } from "./components/ZooPhoto";
 import { VisitDialog } from "./components/VisitDialog";
 import { TripWeather } from "./components/TripWeather";
-import { REVIEW_STORAGE_KEY, type ReviewMap, type ReviewScores, type UserReview } from "./reviews";
+import { REVIEW_STORAGE_KEY, averageReviewScores, normalizeReviewMap, reviewForUser, type ReviewMap, type ReviewScores, type UserReview } from "./reviews";
 import { MEMORY_STORAGE_KEY, type UserMemory } from "./memories";
 import { ACTIVE_PROFILE_STORAGE_KEY, COUPLE_PROFILE_STORAGE_KEY, PLANS_STORAGE_KEY, defaultCoupleProfiles, defaultPackingList, type CoupleProfile, type PlannedTrip } from "./plans";
 import { CoupleAccess, CoupleBar, CoupleSettings, type AccountMode } from "./components/CoupleAccount";
@@ -113,7 +113,7 @@ export default function App() {
     wishes: JSON.parse(window.localStorage.getItem(WISHLIST_KEY) || "[]") as string[],
     visitedIds: JSON.parse(window.localStorage.getItem(VISITED_KEY) || "[]") as string[],
     visits: JSON.parse(window.localStorage.getItem(VISITS_STORAGE_KEY) || "{}") as VisitMap,
-    reviews: JSON.parse(window.localStorage.getItem(REVIEW_STORAGE_KEY) || "{}") as ReviewMap,
+    reviews: normalizeReviewMap(JSON.parse(window.localStorage.getItem(REVIEW_STORAGE_KEY) || "{}"), activeProfileId),
     memories: (JSON.parse(window.localStorage.getItem(MEMORY_STORAGE_KEY) || "[]") as UserMemory[]).filter((memory) => !memory.id.startsWith("sample-")),
     customPlaces: JSON.parse(window.localStorage.getItem(CUSTOM_PLACES_KEY) || "[]") as Zoo[],
   });
@@ -163,7 +163,7 @@ export default function App() {
         window.localStorage.setItem(cleanSlateKey, "done");
       }
       const saved = window.localStorage.getItem(REVIEW_STORAGE_KEY);
-      if (saved) setReviews(JSON.parse(saved) as ReviewMap);
+      if (saved) setReviews(normalizeReviewMap(JSON.parse(saved), activeProfileId));
       const savedMemories = window.localStorage.getItem(MEMORY_STORAGE_KEY);
       if (savedMemories) setUserMemories(JSON.parse(savedMemories) as UserMemory[]);
       const savedPlans = window.localStorage.getItem(PLANS_STORAGE_KEY);
@@ -307,10 +307,12 @@ export default function App() {
   };
   const selectedZoo = allPlaces.find((z) => z.id === selected) || null;
   const saveReview = (review: UserReview) => {
+    const ownReview = { ...review, userId: activeProfile.id };
     setReviews((current) => {
-      const next = { ...current, [review.zooId]: review };
+      const others = (current[review.zooId] || []).filter((item) => item.userId !== activeProfile.id);
+      const next = { ...current, [review.zooId]: [...others, ownReview] };
       if (accountMode === "demo") window.localStorage.setItem(REVIEW_STORAGE_KEY, JSON.stringify(next));
-      else void saveJournalAction({ action: "review", review }).catch(() => setAccountError("De beoordeling kon niet online worden opgeslagen."));
+      else void saveJournalAction({ action: "review", review: ownReview }, true).catch(() => setAccountError("De beoordeling kon niet online worden opgeslagen."));
       return next;
     });
   };
@@ -524,7 +526,9 @@ export default function App() {
           onWish={() => wish(selectedZoo.id)}
           onBack={() => setView("explore")}
           onPlan={() => plan(selectedZoo.id)}
-          review={reviews[selectedZoo.id]}
+          reviews={reviews[selectedZoo.id] || []}
+          currentProfile={activeProfile}
+          profiles={profiles}
           onReview={() => startReview(selectedZoo.id)}
           locationActive={Boolean(userLocation)}
         />
@@ -538,6 +542,8 @@ export default function App() {
           initialZooId={reviewTarget}
           onReviewTargetHandled={() => setReviewTarget(null)}
           places={allPlaces}
+          currentProfile={activeProfile}
+          profiles={profiles}
         />
       )}
       {view === "memories" && <Memories memories={userMemories} onSave={saveMemory} onDelete={deleteMemory} places={allPlaces} />}
@@ -905,7 +911,7 @@ function DashboardHome({ setView, plan, open, places, wishes, visitedIds, visits
   const homePlaces = places.filter((zoo) => visitedIds.includes(zoo.id) || wishes.includes(zoo.id));
   const upcoming = wishlist.filter((zoo) => !visitedIds.includes(zoo.id)).sort((a, b) => a.distance - b.distance)[0];
   const memories = visited.slice(0, 3);
-  const reviewedScores = visited.map((zoo) => reviews[zoo.id]?.scores.overall).filter((score): score is number => typeof score === "number");
+  const reviewedScores = visited.map((zoo) => averageReviewScores(reviews[zoo.id])?.overall).filter((score): score is number => typeof score === "number");
   const avg = reviewedScores.length ? (reviewedScores.reduce((sum, score) => sum + score, 0) / reviewedScores.length).toFixed(1) : "–";
   const totalKm = Object.values(visits).reduce((sum, visit) => sum + visit.kilometers, 0);
   return (
@@ -920,7 +926,7 @@ function DashboardHome({ setView, plan, open, places, wishes, visitedIds, visits
         <div><strong>{visited.length}</strong><span>Bezocht</span></div>
         <div><strong>{wishlist.length}</strong><span>Op de verlanglijst</span></div>
         <button className="dashboard-stat-button" onClick={onLocate} disabled={locating} title="Gebruik je locatie voor afstanden naar nieuwe dierenplekken"><strong>{locating ? "…" : `${totalKm.toLocaleString("nl-NL")} km`}</strong><span>{totalKm ? "Samen gereden" : locationActive ? "Nog geen ritten" : "Locatie instellen"}</span></button>
-        <div><strong>★ {avg}</strong><span>Eigen gemiddelde</span></div>
+        <div><strong>★ {avg}</strong><span>Gemiddeld samen</span></div>
       </section>
       {locationMessage && <p className="dashboard-location-message" role="status">{locationMessage}</p>}
 
@@ -1283,14 +1289,19 @@ function Rankings({
   initialZooId,
   onReviewTargetHandled,
   places,
+  currentProfile,
+  profiles,
 }: {
   reviews: ReviewMap;
   onSave: (review: UserReview) => void;
   initialZooId: string | null;
   onReviewTargetHandled: () => void;
   places: Zoo[];
+  currentProfile: CoupleProfile;
+  profiles: CoupleProfile[];
 }) {
   const [metric, setMetric] = useState<RankKey>("overall");
+  const [scope, setScope] = useState("together");
   const [editing, setEditing] = useState(false);
   const [zooId, setZooId] = useState(places[0].id);
   const [visitDate, setVisitDate] = useState("");
@@ -1299,7 +1310,7 @@ function Rankings({
   const [savedMessage, setSavedMessage] = useState("");
 
   const loadReview = (id: string) => {
-    const ownReview = reviews[id];
+    const ownReview = reviewForUser(reviews[id], currentProfile.id);
     setZooId(id);
     setVisitDate(ownReview?.visitDate || "");
     setNote(ownReview?.note || "");
@@ -1321,9 +1332,14 @@ function Rankings({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialZooId]);
 
+  const profileName = (userId: string) => profiles.find((profile) => profile.id === userId)?.displayName || "Partner";
   const ranked = places
-    .filter((zoo) => Boolean(reviews[zoo.id]))
-    .map((zoo) => ({ zoo, scores: reviews[zoo.id].scores }))
+    .flatMap((zoo) => {
+      const available = reviews[zoo.id] || [];
+      const visibleReviews = scope === "together" ? available : available.filter((review) => review.userId === scope);
+      const averaged = averageReviewScores(visibleReviews);
+      return averaged ? [{ zoo, scores: averaged, visibleReviews }] : [];
+    })
     .sort((a, b) => b.scores[metric] - a.scores[metric]);
 
   const setScore = (key: RankKey, value: number) => setScores((current) => ({ ...current, [key]: value }));
@@ -1331,7 +1347,7 @@ function Rankings({
     event.preventDefault();
     const currentZoo = places.find((zoo) => zoo.id === zooId);
     if (!currentZoo) return;
-    onSave({ zooId, visitDate, note: note.trim(), scores, updatedAt: new Date().toISOString() });
+    onSave({ zooId, userId: currentProfile.id, visitDate, note: note.trim(), scores, updatedAt: new Date().toISOString() });
     setEditing(false);
     setSavedMessage(`Beoordeling van ${currentZoo.name} is opgeslagen ♥`);
   };
@@ -1341,11 +1357,11 @@ function Rankings({
       <PageIntro kicker="ONZE OFFICIËLE LIJST" title="Zoo-ranglijst" text="Bloedserieus beoordeeld op dieren, sfeer, eten en dategevoel." animal="bear" />
       <section className="rankings-toolbar">
         <div>
-          <strong>Jullie persoonlijke ranglijst</strong>
-          <span>Voeg een beoordeling toe en de volgorde wordt meteen opnieuw berekend.</span>
+          <strong>Iedereen een eigen mening</strong>
+          <span>Bekijk de lijst van Paulien, Yida of jullie gezamenlijke gemiddelde.</span>
         </div>
         <button className="review-add-button" onClick={() => beginReview()}>
-          <span aria-hidden="true">＋</span> Beoordeling toevoegen
+          <span aria-hidden="true">＋</span> Mijn beoordeling toevoegen
         </button>
       </section>
       {savedMessage && <p className="review-success" role="status">✓ {savedMessage}</p>}
@@ -1353,8 +1369,8 @@ function Rankings({
         <form className="review-form-card" onSubmit={submitReview}>
           <div className="review-form-heading">
             <div>
-              <span className="eyebrow">JULLIE EIGEN BEOORDELING</span>
-              <h2>Hoe was deze zoo date?</h2>
+              <span className="eyebrow">BEOORDELING VAN {currentProfile.displayName.toLocaleUpperCase("nl")}</span>
+              <h2>Wat vond jij van deze zoo date?</h2>
             </div>
             <button type="button" className="review-close" onClick={() => setEditing(false)} aria-label="Formulier sluiten">×</button>
           </div>
@@ -1367,12 +1383,12 @@ function Rankings({
                 </select>
               </label>
               <label>
-                Datum van jullie bezoek <small>(optioneel)</small>
+                Datum van het bezoek <small>(optioneel)</small>
                 <input type="date" value={visitDate} onChange={(event) => setVisitDate(event.target.value)} />
               </label>
               <label>
-                Wat vonden jullie ervan?
-                <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={6} placeholder="Bijvoorbeeld: de rode panda's waren ons hoogtepunt..." />
+                Wat vond jij ervan?
+                <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={6} placeholder="Bijvoorbeeld: de rode panda's waren mijn hoogtepunt..." />
               </label>
             </div>
             <fieldset className="rating-fields">
@@ -1399,6 +1415,10 @@ function Rankings({
           </div>
         </form>
       )}
+      <section className="review-owner-tabs" aria-label="Kies van wie je de ranglijst wilt zien">
+        <button className={scope === "together" ? "active" : ""} onClick={() => setScope("together")}><span className="review-owner-avatar together">P+Y</span><span><strong>Samen</strong><small>Gemiddelde score</small></span></button>
+        {profiles.map((profile) => <button key={profile.id} className={scope === profile.id ? "active" : ""} onClick={() => setScope(profile.id)}><span className="review-owner-avatar">{profile.displayName.slice(0, 1).toLocaleUpperCase("nl")}</span><span><strong>{profile.displayName}</strong><small>{profile.id === currentProfile.id ? "Jouw ranglijst" : "Eigen ranglijst"}</small></span></button>)}
+      </section>
       <section className="rankings-tabs">
         {rankingTabs.map((t) => (
           <button key={t.key} className={metric === t.key ? "active" : ""} onClick={() => setMetric(t.key)}>
@@ -1407,10 +1427,10 @@ function Rankings({
         ))}
       </section>
       <section className="ranking-list">
-        {ranked.length === 0 && <div className="ranking-empty"><span>☆</span><h3>Nog geen beoordelingen</h3><p>Voeg na jullie eerste bezoek een beoordeling toe. Daarna ontstaat jullie ranglijst vanzelf.</p><button onClick={() => beginReview()}>＋ Eerste beoordeling toevoegen</button></div>}
-        {ranked.map(({ zoo: z, scores: zooScores }, i) => {
-          const ownReview = reviews[z.id];
-          const displayNote = ownReview.note || "Geen notitie toegevoegd.";
+        {ranked.length === 0 && <div className="ranking-empty"><span>☆</span><h3>Nog geen beoordelingen</h3><p>{scope === "together" ? "Voeg jullie eigen beoordelingen toe. Daarna ontstaat de gezamenlijke ranglijst vanzelf." : `${profileName(scope)} heeft nog geen dierenplek beoordeeld.`}</p><button onClick={() => beginReview()}>＋ Mijn eerste beoordeling toevoegen</button></div>}
+        {ranked.map(({ zoo: z, scores: zooScores, visibleReviews }, i) => {
+          const ownReview = reviewForUser(reviews[z.id], currentProfile.id);
+          const displayNote = visibleReviews.map((review) => review.note ? `${profileName(review.userId)}: ${review.note}` : "").filter(Boolean).join(" · ") || "Geen notitie toegevoegd.";
           return (
           <article key={z.id} className="review-row">
             <b className="rank">{i + 1}</b>
@@ -1418,7 +1438,7 @@ function Rankings({
               <ZooPhoto animal={z.animal} alt={z.name} />
             </span>
             <div>
-              <small>{z.city}{ownReview ? " · jullie review" : ""}</small>
+              <small>{z.city} · {scope === "together" ? `${visibleReviews.length} ${visibleReviews.length === 1 ? "beoordeling" : "beoordelingen"}` : `beoordeling van ${profileName(scope)}`}</small>
               <h3>{z.name}</h3>
               <p>{displayNote}</p>
             </div>
@@ -1426,7 +1446,7 @@ function Rankings({
               {zooScores[metric].toFixed(1)}
               <small>/ 10</small>
             </strong>
-            <button className="rank-review-button" onClick={() => beginReview(z.id)}>{ownReview ? "Wijzig" : "Beoordeel"}</button>
+            <button className="rank-review-button" onClick={() => beginReview(z.id)}>{ownReview ? "Mijn review wijzigen" : "Zelf beoordelen"}</button>
           </article>
         )})}
       </section>

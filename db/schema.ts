@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, primaryKey, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const coupleSettings = sqliteTable("couple_settings", {
   id: integer("id").primaryKey(),
@@ -57,13 +57,16 @@ export const sharedVisits = sqliteTable("shared_visits", {
 ]);
 
 export const sharedReviews = sqliteTable("shared_reviews", {
-  zooId: text("zoo_id").primaryKey(),
+  zooId: text("zoo_id").notNull(),
   visitDate: text("visit_date").notNull().default(""),
   note: text("note").notNull().default(""),
   scoresJson: text("scores_json").notNull(),
-  updatedByUserId: text("updated_by_user_id").notNull(),
+  userId: text("updated_by_user_id").notNull(),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-});
+}, (table) => [
+  primaryKey({ columns: [table.zooId, table.userId] }),
+  index("idx_shared_reviews_user_id").on(table.userId),
+]);
 
 export const sharedMemories = sqliteTable("shared_memories", {
   id: text("id").primaryKey(),

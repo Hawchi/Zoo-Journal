@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { loadAnimalMedia, loadOfficialAnimalIndex, loadPlaceEnrichment, type OfficialAnimalIndex, type PlaceEnrichment, type PlaceMedia } from "../place-enrichment";
 import { googleMapsDirectionsUrl, wazeDirectionsUrl } from "../route-links";
 import type { Rating1to5, Zoo } from "../zoo-data";
-import type { UserReview } from "../reviews";
+import { averageReviewScores, reviewForUser, type UserReview } from "../reviews";
+import type { CoupleProfile } from "../plans";
 import { LiveTicketPrices } from "./LiveTicketPrices";
 import { ZooHeroPrice } from "./ZooHeroPrice";
 import { ZooPhoto } from "./ZooPhoto";
@@ -45,13 +46,15 @@ function RouteMenu({ zoo }: { zoo: Zoo }) {
   </details>;
 }
 
-export function ZooDetail({ zoo, wished, onWish, onBack, onPlan, review, onReview, locationActive }: {
+export function ZooDetail({ zoo, wished, onWish, onBack, onPlan, reviews, currentProfile, profiles, onReview, locationActive }: {
   zoo: Zoo;
   wished: boolean;
   onWish: () => void;
   onBack: () => void;
   onPlan: () => void;
-  review?: UserReview;
+  reviews: UserReview[];
+  currentProfile: CoupleProfile;
+  profiles: CoupleProfile[];
   onReview: () => void;
   locationActive: boolean;
 }) {
@@ -126,6 +129,8 @@ export function ZooDetail({ zoo, wished, onWish, onBack, onPlan, review, onRevie
   const todayIndex = (new Date().getDay() + 6) % 7;
   const todayHours = schedule[todayIndex]?.hours;
   const categoryLabel = zoo.category === "aquarium" ? "AQUARIUM" : zoo.category === "petting-zoo" ? "KINDERBOERDERIJ" : zoo.category === "animal-park" ? "DIERENPARK" : "DIERENTUIN";
+  const currentReview = reviewForUser(reviews, currentProfile.id);
+  const combinedScores = averageReviewScores(reviews);
 
   return <section className="zoo-detail">
     <div className="detail-back-row"><button className="back-link" onClick={onBack}><span aria-hidden="true">←</span> Terug naar alle dierenplekken</button><span>Ontdekken / {zoo.name}</span></div>
@@ -171,7 +176,18 @@ export function ZooDetail({ zoo, wished, onWish, onBack, onPlan, review, onRevie
 
         {tab === "Foto’s" && <section className="media-section"><div className="media-heading"><h2>Fotoalbum van {zoo.name}</h2></div>{enrichmentLoading ? <div className="media-loading">Foto’s worden geladen…</div> : enrichment.media.length ? <div className="public-media-grid clean">{enrichment.media.map((media) => <a href={media.sourceUrl} target="_blank" rel="noreferrer" key={media.sourceUrl}><img src={media.thumbnailUrl} alt={media.title} loading="lazy" /></a>)}</div> : <div className="media-empty"><div><ZooPhoto animal={zoo.animal} alt={zoo.name} /></div><p>Nog geen passend fotoalbum beschikbaar.</p></div>}</section>}
 
-        {tab === "Beoordelingen" && <div>{review ? <article className="review-note"><strong>Jullie opgeslagen beoordeling</strong>{review.note && <p>{review.note}</p>}<span className="review-score">{review.scores.overall.toFixed(1)} / 10</span></article> : <p className="muted-note">Nog geen beoordeling. Hier komt jullie mening zodra jullie zijn geweest.</p>}<button className="review-detail-button" onClick={onReview}>{review ? "Beoordeling wijzigen" : "＋ Beoordeling toevoegen"}</button></div>}
+        {tab === "Beoordelingen" && <section className="detail-reviews">
+          <header className="detail-reviews-heading"><div><span className="eyebrow">JULLIE MENINGEN</span><h2>Twee reviews, één gemiddelde</h2></div>{combinedScores && <strong><span>{combinedScores.overall.toFixed(1)}</span><small> samen</small></strong>}</header>
+          <div className="review-duo-grid">{profiles.map((profile) => {
+            const personalReview = reviewForUser(reviews, profile.id);
+            return <article className={`review-person-card ${personalReview ? "filled" : "empty"}`} key={profile.id}>
+              <span className="review-person-avatar">{profile.displayName.slice(0, 1).toLocaleUpperCase("nl")}</span>
+              <div><small>BEOORDELING VAN</small><h3>{profile.displayName}</h3>{personalReview?.visitDate && <time>{new Date(`${personalReview.visitDate}T12:00:00`).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" })}</time>}</div>
+              {personalReview ? <><strong className="review-score">{personalReview.scores.overall.toFixed(1)} / 10</strong><p>{personalReview.note || "Geen notitie toegevoegd."}</p></> : <p>Nog geen eigen beoordeling toegevoegd.</p>}
+            </article>;
+          })}</div>
+          <button className="review-detail-button" onClick={onReview}>{currentReview ? "Mijn beoordeling wijzigen" : "＋ Mijn beoordeling toevoegen"}</button>
+        </section>}
       </div>
     </div>
   </section>;

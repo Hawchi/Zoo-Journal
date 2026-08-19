@@ -72,14 +72,23 @@ export async function journalState() {
   const [placeRows, visitRows, reviewRows, memoryRows, customRows] = await Promise.all([
     db.prepare("SELECT zoo_id AS zooId, wished, visited FROM shared_place_states").all<Record<string, unknown>>(),
     db.prepare("SELECT zoo_id AS zooId, visit_date AS date, start_point AS startPoint, distance_km AS kilometers, updated_at AS updatedAt FROM shared_visits").all<Record<string, unknown>>(),
-    db.prepare("SELECT zoo_id AS zooId, visit_date AS visitDate, note, scores_json AS scoresJson, updated_at AS updatedAt FROM shared_reviews").all<Record<string, unknown>>(),
+    db.prepare("SELECT zoo_id AS zooId, updated_by_user_id AS userId, visit_date AS visitDate, note, scores_json AS scoresJson, updated_at AS updatedAt FROM shared_reviews").all<Record<string, unknown>>(),
     db.prepare("SELECT id, zoo_id AS zooId, visit_date AS date, caption, note, image_key AS imageKey, created_at AS createdAt, updated_at AS updatedAt FROM shared_memories ORDER BY created_at DESC").all<Record<string, unknown>>(),
     db.prepare("SELECT place_json AS placeJson FROM shared_custom_places ORDER BY created_at DESC").all<Record<string, unknown>>(),
   ]);
-  const reviews = Object.fromEntries(reviewRows.results.map((row) => [String(row.zooId), {
-    zooId: String(row.zooId), visitDate: String(row.visitDate || ""), note: String(row.note || ""),
-    scores: parseJson<Record<string, number>>(row.scoresJson, {}), updatedAt: String(row.updatedAt || ""),
-  }]));
+  const reviews = reviewRows.results.reduce<Record<string, Array<Record<string, unknown>>>>((result, row) => {
+    const zooId = String(row.zooId);
+    const review = {
+      zooId,
+      userId: String(row.userId),
+      visitDate: String(row.visitDate || ""),
+      note: String(row.note || ""),
+      scores: parseJson<Record<string, number>>(row.scoresJson, {}),
+      updatedAt: String(row.updatedAt || ""),
+    };
+    result[zooId] = [...(result[zooId] || []), review];
+    return result;
+  }, {});
   const visits = Object.fromEntries(visitRows.results.map((row) => [String(row.zooId), {
     zooId: String(row.zooId), date: String(row.date || ""), startPoint: String(row.startPoint || ""),
     kilometers: Math.max(0, Number(row.kilometers) || 0), updatedAt: String(row.updatedAt || ""),
@@ -134,7 +143,7 @@ export async function saveReview(userId: string, review: ReviewInput) {
   const zooId = clean(review.zooId, 160);
   if (!zooId || !review.scores || typeof review.scores !== "object") throw new Error("Beoordeling is niet compleet.");
   const scores = Object.fromEntries(Object.entries(review.scores).map(([key, value]) => [clean(key, 40), Math.max(0, Math.min(10, Number(value) || 0))]));
-  await database().prepare("INSERT INTO shared_reviews (zoo_id, visit_date, note, scores_json, updated_by_user_id, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT(zoo_id) DO UPDATE SET visit_date = excluded.visit_date, note = excluded.note, scores_json = excluded.scores_json, updated_by_user_id = excluded.updated_by_user_id, updated_at = CURRENT_TIMESTAMP")
+  await database().prepare("INSERT INTO shared_reviews (zoo_id, visit_date, note, scores_json, updated_by_user_id, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT(zoo_id, updated_by_user_id) DO UPDATE SET visit_date = excluded.visit_date, note = excluded.note, scores_json = excluded.scores_json, updated_at = CURRENT_TIMESTAMP")
     .bind(zooId, clean(review.visitDate, 20), clean(review.note, 4000), JSON.stringify(scores), userId).run();
 }
 
@@ -187,14 +196,16 @@ export async function saveCustomPlace(userId: string, place: CustomPlaceInput) {
     .bind(id, encoded, userId).run();
 }
 
-export async function importLocalJournal(userId: string, snapshot: { wishes?: unknown[]; visitedIds?: unknown[]; visits?: Record<string, VisitInput>; reviews?: Record<string, ReviewInput>; memories?: MemoryInput[]; customPlaces?: CustomPlaceInput[] }) {
+export async function importLocalJournal(userId: string, snapshot: { wishes?: unknown[]; visitedIds?: unknown[]; visits?: Record<string, VisitInput>; reviews?: Record<string, ReviewInput | ReviewInput[]>; memories?: MemoryInput[]; customPlaces?: CustomPlaceInput[] }) {
   const wished = new Set((snapshot.wishes || []).map((value) => clean(value, 160)).filter(Boolean));
   const visited = new Set((snapshot.visitedIds || []).map((value) => clean(value, 160)).filter(Boolean));
   for (const zooId of new Set([...wished, ...visited])) {
     await database().prepare("INSERT INTO shared_place_states (zoo_id, wished, visited, updated_by_user_id, updated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT(zoo_id) DO UPDATE SET wished = MAX(wished, excluded.wished), visited = MAX(visited, excluded.visited), updated_by_user_id = excluded.updated_by_user_id, updated_at = CURRENT_TIMESTAMP")
       .bind(zooId, wished.has(zooId) ? 1 : 0, visited.has(zooId) ? 1 : 0, userId).run();
   }
-  for (const review of Object.values(snapshot.reviews || {})) await saveReview(userId, review);
+  for (const stored of Object.values(snapshot.reviews || {})) {
+    for (const review of Array.isArray(stored) ? stored : [stored]) await saveReview(userId, review);
+  }
   for (const visit of Object.values(snapshot.visits || {})) await saveVisit(userId, visit);
   for (const memory of snapshot.memories || []) await saveMemory(userId, memory);
   for (const place of snapshot.customPlaces || []) await saveCustomPlace(userId, place);

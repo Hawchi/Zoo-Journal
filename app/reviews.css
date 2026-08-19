@@ -5,6 +5,11 @@
 .review-add-button{white-space:nowrap}
 .review-add-button span{display:inline;color:inherit;font-size:18px;margin:0 3px 0 0}
 .review-success{max-width:850px;margin:0 auto 16px;padding:12px 16px;border-radius:12px;background:#e5eddc;color:#4b6144;font-weight:700}
+.review-owner-tabs{max-width:850px;margin:0 auto 14px;padding:6px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;border:1px solid #d9ccb6;border-radius:18px;background:#f6eddd}
+.review-owner-tabs button{min-width:0;min-height:58px;padding:8px 10px;display:flex;align-items:center;gap:9px;border:1px solid transparent;border-radius:13px;background:transparent;color:#6f6457;text-align:left;cursor:pointer}
+.review-owner-tabs button.active{border-color:#aabd99;background:#fffaf1;color:#465640;box-shadow:0 4px 12px #64523917}
+.review-owner-tabs button>span:last-child{min-width:0}.review-owner-tabs strong,.review-owner-tabs small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.review-owner-tabs strong{font-size:13px}.review-owner-tabs small{margin-top:2px;color:#938778;font-size:10px}
+.review-owner-avatar{flex:0 0 36px;width:36px;height:36px;display:grid;place-items:center;border-radius:50%;background:#e3a08e;color:#fff;font:700 15px Georgia,serif;box-shadow:inset 0 0 0 3px #fff8}.review-owner-avatar.together{background:#879b79;font-size:11px}
 .review-form-card{max-width:850px;margin:0 auto 24px;padding:24px;background:#fffaf1;border:1px solid #d8c8ad;border-radius:20px;box-shadow:0 14px 35px #715c3e1c;scroll-margin-top:24px}
 .review-form-heading{display:flex;align-items:start;justify-content:space-between;gap:20px;margin-bottom:20px}
 .review-form-heading h2{margin:5px 0 0;color:var(--deep);font:600 28px Georgia,serif}
@@ -28,6 +33,8 @@
 .ranking-list article.unrated .rank-animal{opacity:.7}
 .rank-review-button{min-height:38px;padding:8px 10px;border-radius:10px;font-size:11px;box-shadow:none}
 .review-detail-button{margin-top:14px}
+.detail-reviews{padding:4px}.detail-reviews-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:18px}.detail-reviews-heading h2{margin:4px 0 0;color:var(--deep);font:600 27px Georgia,serif}.detail-reviews-heading>strong{min-width:86px;padding:10px 12px;border-radius:16px;background:#e4ecd9;color:#4d6248;text-align:center}.detail-reviews-heading>strong span{display:block;font:700 25px Georgia,serif}.detail-reviews-heading>strong small{font-size:10px}
+.review-duo-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.review-person-card{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;padding:16px;border:1px solid #ddcfb9;border-radius:18px;background:#fffaf1}.review-person-card.empty{border-style:dashed;background:#f8f1e5}.review-person-avatar{width:42px;height:42px;display:grid;place-items:center;border-radius:50%;background:#e4a08e;color:white;font:700 20px Georgia,serif;box-shadow:inset 0 0 0 3px #fff8}.review-person-card small{font-size:8px;letter-spacing:.8px;color:#998b7b}.review-person-card h3{margin:2px 0 0;color:var(--deep);font:600 19px Georgia,serif}.review-person-card time{display:block;margin-top:3px;color:#8e8273;font-size:10px}.review-person-card .review-score{margin:0;white-space:nowrap}.review-person-card p{grid-column:1/-1;margin:4px 0 0;color:#776b5e;line-height:1.5}
 .ranking-empty{grid-column:1/-1;max-width:620px;margin:16px auto;padding:36px 24px;border:1px dashed #cdbda5;border-radius:20px;background:#f8f1e4;text-align:center;color:#74695d}
 .ranking-empty>span{display:grid;place-items:center;width:52px;height:52px;margin:0 auto 12px;border-radius:50%;background:#eadccc;color:#d37f69;font-size:29px}
 .ranking-empty h3{margin:0 0 8px;color:var(--deep);font:600 25px Georgia,serif}
@@ -36,6 +43,7 @@
 .review-detail-button:focus-visible,.review-add-button:focus-visible,.rank-review-button:focus-visible,.review-close:focus-visible{outline:3px solid #d8876c;outline-offset:3px}
 @media(max-width:760px){
   .rankings-toolbar{margin:0 18px 16px;align-items:stretch;flex-direction:column;padding:16px}
+  .review-owner-tabs{margin-left:18px;margin-right:18px}
   .review-add-button{width:100%}
   .review-success,.review-form-card{margin-left:18px;margin-right:18px}
   .review-form-card{padding:18px}
@@ -46,11 +54,14 @@
   .review-form-actions .primary,.review-cancel{width:100%}
   .ranking-list article.review-row{grid-template-columns:28px 50px minmax(0,1fr) 52px;gap:9px}
   .ranking-list article.review-row .rank-review-button{grid-column:3 / -1;width:100%}
+  .review-duo-grid{grid-template-columns:1fr}
 }
 @media(max-width:520px){
-  .rankings-toolbar,.review-success,.review-form-card{margin-left:12px;margin-right:12px}
+  .rankings-toolbar,.review-success,.review-form-card,.review-owner-tabs{margin-left:12px;margin-right:12px}
+  .review-owner-tabs{display:flex;overflow-x:auto;scroll-snap-type:x mandatory}.review-owner-tabs button{flex:0 0 84%;scroll-snap-align:start}
   .rankings-tabs,.ranking-list{margin-left:12px;margin-right:12px}
   .rankings-tabs{flex-wrap:nowrap;overflow-x:auto;padding-bottom:5px;scrollbar-width:none}.rankings-tabs button{flex:0 0 auto}
   .ranking-list article.review-row{grid-template-columns:24px 44px minmax(0,1fr) 46px;padding:10px 9px;gap:7px}
   .ranking-list h3{font-size:15px}.score{font-size:18px}
+  .detail-reviews-heading h2{font-size:23px}.review-person-card{grid-template-columns:40px minmax(0,1fr) auto;padding:13px}.review-person-avatar{width:38px;height:38px}
 }

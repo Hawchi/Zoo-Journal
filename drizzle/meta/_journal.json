@@ -29,6 +29,13 @@
       "when": 1787097362007,
       "tag": "0003_slippery_malice",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1787100918403,
+      "tag": "0004_lumpy_sprite",
+      "breakpoints": true
     }
   ]
 }

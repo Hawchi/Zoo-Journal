@@ -100,6 +100,28 @@ test("keeps the mobile journal responsive and makes visits useful", async () => 
   assert.match(reviews, /\.rankings-tabs/);
 });
 
+test("stores separate reviews for both partners and calculates a shared ranking", async () => {
+  const [page, reviews, detail, journalDb, schema, migration, reviewCss] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/reviews.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/ZooDetail.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/_shared/journal-db.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0004_lumpy_sprite.sql", import.meta.url), "utf8"),
+    readFile(new URL("../app/reviews.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(reviews, /Record<string, UserReview\[\]>/);
+  assert.match(reviews, /averageReviewScores/);
+  assert.match(page, /review-owner-tabs/);
+  assert.match(page, /Gemiddelde score/);
+  assert.match(page, /currentProfile\.id/);
+  assert.match(detail, /Twee reviews, één gemiddelde/);
+  assert.match(journalDb, /ON CONFLICT\(zoo_id, updated_by_user_id\)/);
+  assert.match(schema, /primaryKey\(\{ columns: \[table\.zooId, table\.userId\] \}\)/);
+  assert.match(migration, /PRIMARY KEY\(`zoo_id`, `updated_by_user_id`\)/);
+  assert.match(reviewCss, /\.review-duo-grid/);
+});
+
 test("keeps zoos, animal parks and petting zoos in separate filters", async () => {
   const [page, places, map] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
