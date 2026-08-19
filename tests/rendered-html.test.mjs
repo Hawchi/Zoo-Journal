@@ -89,7 +89,7 @@ test("keeps the mobile journal responsive and makes visits useful", async () => 
   assert.match(page, /<TripWeather/);
   assert.match(page, /useState\(Boolean\(partnerProfile\)\)/);
   assert.match(visitDialog, /Datum van het bezoek/);
-  assert.match(visitDialog, /Vertrokken vanaf/);
+  assert.match(visitDialog, /Naam van het vertrekpunt/);
   assert.match(visitDialog, /Gereden kilometers in totaal/);
   assert.match(weather, /api\.open-meteo\.com/);
   assert.match(hours, /openingHoursSpecification/);
@@ -98,6 +98,23 @@ test("keeps the mobile journal responsive and makes visits useful", async () => 
   assert.match(planner, /\.trip-weather/);
   assert.match(memories, /\.memory-modal/);
   assert.match(reviews, /\.rankings-tabs/);
+});
+
+test("calculates a privacy-conscious driving distance for registered visits", async () => {
+  const [dialog, distanceApi, placesCss] = await Promise.all([
+    readFile(new URL("../app/components/VisitDialog.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/distance/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/places.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(dialog, /\/api\/distance/);
+  assert.match(dialog, /Gebruik huidige locatie/);
+  assert.match(dialog, /HEEN EN TERUG/);
+  assert.match(dialog, /setKilometers\(String\(payload\.roundTripKm\)\)/);
+  assert.match(distanceApi, /requireMember/);
+  assert.match(distanceApi, /nominatim\.openstreetmap\.org/);
+  assert.match(distanceApi, /router\.project-osrm\.org\/route\/v1\/driving/);
+  assert.match(distanceApi, /private, no-store/);
+  assert.match(placesCss, /\.visit-route-calculator/);
 });
 
 test("stores separate reviews for both partners and calculates a shared ranking", async () => {
@@ -209,6 +226,6 @@ test("publishes the red panda as the Apple home-screen icon", async () => {
   assert.match(layout, /apple-touch-icon-precomposed/);
   assert.match(manifest, /app-icon-192-v2\.png/);
   assert.match(manifest, /app-icon-512-v2\.png/);
-  assert.match(serviceWorker, /zoo-journal-v15/);
+  assert.match(serviceWorker, /zoo-journal-v16/);
   assert.match(serviceWorker, /apple-touch-icon-v2\.png/);
 });
