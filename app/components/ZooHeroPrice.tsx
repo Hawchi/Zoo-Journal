@@ -46,18 +46,18 @@ export function ZooHeroPrice({ zoo }: { zoo: Zoo }) {
   }, [canCheck, date, zoo.id]);
 
   const adult = adultPrice(price?.prices ?? []);
-  if (!canCheck) return <div className="hero-price-row"><a className="hero-price-card unavailable" href={zoo.website} target="_blank" rel="noreferrer"><span>ENTREEPRIJS</span><strong>Bekijk bij locatie</strong><small>Officiële website ↗</small></a></div>;
+  if (!canCheck) return <div className="hero-price-row"><a className="hero-price-card unavailable" href={zoo.website} target="_blank" rel="noreferrer"><span>ENTREEPRIJS</span><strong>Bekijk bij locatie</strong><small>Officiële website</small></a></div>;
 
   return <div className="hero-price-row" aria-live="polite">
     <a className={`hero-price-card official ${loading ? "loading" : ""}`} href={price?.bookingUrl || zoo.website} target="_blank" rel="noreferrer">
       <span><i /> PRIJS VOOR MORGEN</span>
       <strong>{loading ? "Prijs ophalen…" : adult ? priceLabel(adult) : "Bekijk datumprijs"}</strong>
-      <small>{adult ? price?.precision === "exact-date" ? "Exact · volwassene" : adult.qualifier === "from" ? "Officiële vanafprijs" : adult.qualifier === "range" ? "Officieel prijsbereik" : "Actueel officieel tarief" : "Officiële ticketkalender"} ↗</small>
+      <small>{adult ? price?.precision === "exact-date" ? "Exact · volwassene" : adult.qualifier === "from" ? "Officiële vanafprijs" : adult.qualifier === "range" ? "Officieel prijsbereik" : "Actueel officieel tarief" : "Officiële ticketkalender"}</small>
     </a>
     <a className={`hero-price-card deal ${deal?.status === "live" ? "active" : ""}`} href={deal?.dealUrl || "https://www.socialdeal.nl/inspirations/wildlife-weeks-75f326a308/arnhem/"} target="_blank" rel="noreferrer">
       <span>SOCIAL DEAL {deal?.status === "live" && <b>−{deal.discountPercent}%</b>}</span>
       {deal?.status === "live" && deal.dealPrice !== undefined ? <strong>{money.format(deal.dealPrice)} <s>{deal.regularPrice !== undefined ? money.format(deal.regularPrice) : ""}</s></strong> : <strong>{loading ? "Dealcheck…" : "Bekijk actuele deals"}</strong>}
-      <small>{deal?.status === "live" ? "Actuele aanbieding gevonden" : "Geen vaste korting beloofd"} ↗</small>
+      <small>{deal?.status === "live" ? "Actuele aanbieding gevonden" : "Geen vaste korting beloofd"}</small>
     </a>
   </div>;
 }

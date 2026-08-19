@@ -12,7 +12,7 @@ export const knownCoordinates: Record<string, [number, number]> = {
   leipzig: [51.349, 12.373], berlin: [52.508, 13.337],
 };
 
-const animals: AnimalKey[] = ["redpanda", "elephant", "giraffe", "monkey", "tiger", "bear", "flamingo", "lion"];
+const animals: AnimalKey[] = ["redpanda", "elephant", "giraffe", "monkey", "tiger", "bear", "flamingo", "lion", "penguin", "otter", "seal", "goat"];
 const countryNames: Record<Country, string> = { NL: "Nederland", BE: "België", DE: "Duitsland" };
 const animalParkTypes = ["wildlife_park", "safari_park", "bird_park", "butterfly_garden"];
 const pettingPlaceTerms = [
@@ -47,15 +47,25 @@ function classifyPlace(tags: Record<string, string>, name: string): Zoo["categor
   return "zoo";
 }
 
+function animalForPlace(category: Zoo["category"], index: number): AnimalKey {
+  if (category === "petting-zoo") return "goat";
+  if (category === "aquarium") return (["seal", "penguin", "otter", "flamingo"] as AnimalKey[])[index % 4];
+  if (category === "animal-park") return (["otter", "bear", "tiger", "redpanda"] as AnimalKey[])[index % 4];
+  return animals[index % animals.length];
+}
+
 export function repairAnimalPlaceCategory(place: Zoo): Zoo {
-  if (place.source !== "openstreetmap" || place.category === "aquarium") return place;
+  if (place.source !== "openstreetmap") return place;
+  const artworkIndex = [...place.name].reduce((sum, character) => sum + character.charCodeAt(0), 0);
+  if (place.category === "aquarium") return { ...place, animal: animalForPlace("aquarium", artworkIndex) };
   const shouldBePettingPlace = place.category === "petting-zoo" || looksLikePettingPlace([
     place.name, place.intro, place.about, place.animalsText, ...place.highlights,
   ]);
-  if (!shouldBePettingPlace || place.category === "petting-zoo") return place;
+  if (!shouldBePettingPlace || place.category === "petting-zoo") return { ...place, animal: animalForPlace(place.category, artworkIndex) };
   return {
     ...place,
     category: "petting-zoo",
+    animal: "goat",
     intro: "Een kinderboerderij uit de actuele dierenplekkenlijst om samen te ontdekken.",
     highlights: ["Kinderboerderij", ...place.highlights.filter((item) => item !== "Dierentuin").slice(0, 2)],
     about: `${place.name} is een kinderboerderij in ${place.city}. De detailpagina vult deze kaartgegevens aan met openbare achtergrondinformatie en foto’s.`,
@@ -85,7 +95,7 @@ function normalizePlace(element: OverpassElement, country: Country, index: numbe
     price: 0,
     website,
     visited: false,
-    animal: animals[index % animals.length],
+    animal: animalForPlace(category, index),
     color: category === "aquarium" ? "#b9d2ce" : "#bac99d",
     intro: `Een ${kind} uit de actuele dierenplekkenlijst om samen te ontdekken.`,
     highlights: [category === "aquarium" ? "Onderwaterwereld" : category === "petting-zoo" ? "Kinderboerderij" : category === "animal-park" ? "Wildlifepark" : "Dierentuin", city, "Live kaartdata"],
@@ -164,7 +174,7 @@ export function createCustomPlace(input: {
     id: `custom-${Date.now()}`,
     name: input.name.trim(), city: input.city.trim(), country: input.country, countryName: countryNames[input.country],
     distance: 999, driveMinutes: 0, price: 0, website: input.website.trim(), visited: false,
-    animal: input.category === "aquarium" ? "flamingo" : "redpanda", color: input.category === "aquarium" ? "#b9d2ce" : "#bac99d",
+    animal: input.category === "aquarium" ? "seal" : input.category === "petting-zoo" ? "goat" : "redpanda", color: input.category === "aquarium" ? "#b9d2ce" : "#bac99d",
     intro: input.category === "aquarium" ? "Een zelf toegevoegd aquarium of onderwateruitje." : "Een zelf toegevoegde dierenlocatie.",
     highlights: [input.category === "aquarium" ? "Aquarium" : "Dierenplek", "Zelf toegevoegd"],
     about: "Deze dierenlocatie hebben jullie zelf aan het journal toegevoegd.", animalsText: "Voeg na jullie bezoek eigen herinneringen en een review toe.",

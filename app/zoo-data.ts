@@ -7,7 +7,11 @@ export type AnimalKey =
   | "monkey"
   | "tiger"
   | "bear"
-  | "flamingo";
+  | "flamingo"
+  | "penguin"
+  | "otter"
+  | "seal"
+  | "goat";
 
 export type Rating1to5 = 1 | 2 | 3 | 4 | 5;
 
@@ -235,6 +239,10 @@ export const animalLabel: Record<AnimalKey, string> = {
   tiger: "tijger",
   bear: "beer",
   flamingo: "flamingo",
+  penguin: "pinguïn",
+  otter: "otter",
+  seal: "zeehond",
+  goat: "geit",
 };
 
 export const bucketList = [

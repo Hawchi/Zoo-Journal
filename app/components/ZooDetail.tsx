@@ -10,6 +10,7 @@ import { ZooPhoto } from "./ZooPhoto";
 const flagEmoji: Record<string, string> = { NL: "🇳🇱", BE: "🇧🇪", DE: "🇩🇪" };
 const tabs = ["Overzicht", "Dieren", "Bezoekinfo", "Foto’s", "Beoordelingen"] as const;
 type Tab = (typeof tabs)[number];
+type HoursResult = { hours: string; status: "idle" | "loading" | "official" | "map" | "unavailable"; sourceName?: string; sourceUrl?: string; googleUrl?: string; message?: string };
 
 const week = [
   ["Mo", "Maandag"], ["Tu", "Dinsdag"], ["We", "Woensdag"], ["Th", "Donderdag"],
@@ -62,6 +63,7 @@ export function ZooDetail({ zoo, wished, onWish, onBack, onPlan, review, onRevie
   const [animalsLoading, setAnimalsLoading] = useState(false);
   const [animalSearch, setAnimalSearch] = useState("");
   const [showAllAnimals, setShowAllAnimals] = useState(false);
+  const [hoursResult, setHoursResult] = useState<HoursResult>({ hours: "", status: "idle" });
 
   useEffect(() => {
     let active = true;
@@ -102,12 +104,25 @@ export function ZooDetail({ zoo, wished, onWish, onBack, onPlan, review, onRevie
     return () => { active = false; };
   }, [tab, zoo.id, zoo.website, zoo.country]);
 
+  useEffect(() => {
+    if (tab !== "Bezoekinfo" || zoo.openingHours) return;
+    let active = true;
+    const query = new URLSearchParams({ name: zoo.name, city: zoo.city, country: zoo.country, website: zoo.website || "" });
+    fetch(`/api/hours?${query}`, { cache: "no-store" })
+      .then(async (response) => await response.json() as Omit<HoursResult, "status"> & { status: HoursResult["status"] })
+      .then((result) => { if (active) setHoursResult(result); })
+      .catch(() => { if (active) setHoursResult({ hours: "", status: "unavailable", message: "De openingstijden konden nu niet worden gecontroleerd." }); });
+    return () => { active = false; };
+  }, [tab, zoo.id, zoo.name, zoo.city, zoo.country, zoo.website, zoo.openingHours]);
+
   const animalNames = animalIndex?.names ?? zoo.animalNames ?? [];
   const filteredAnimalNames = animalSearch.trim()
     ? animalNames.filter((animal) => animal.toLocaleLowerCase("nl").includes(animalSearch.trim().toLocaleLowerCase("nl")))
     : animalNames;
   const visibleAnimalNames = showAllAnimals || animalSearch.trim() ? filteredAnimalNames : filteredAnimalNames.slice(0, 24);
-  const schedule = weeklySchedule(zoo.openingHours);
+  const effectiveOpeningHours = zoo.openingHours || hoursResult.hours;
+  const checkingHours = tab === "Bezoekinfo" && !zoo.openingHours && hoursResult.status === "idle";
+  const schedule = weeklySchedule(effectiveOpeningHours);
   const todayIndex = (new Date().getDay() + 6) % 7;
   const todayHours = schedule[todayIndex]?.hours;
   const categoryLabel = zoo.category === "aquarium" ? "AQUARIUM" : zoo.category === "petting-zoo" ? "KINDERBOERDERIJ" : zoo.category === "animal-park" ? "DIERENPARK" : "DIERENTUIN";
@@ -126,7 +141,7 @@ export function ZooDetail({ zoo, wished, onWish, onBack, onPlan, review, onRevie
         <div className="detail-main-actions">
           <button className="primary" onClick={onPlan}>Uitje plannen</button>
           <RouteMenu zoo={zoo} />
-          {zoo.website && <a className="official-website-link" href={zoo.website} target="_blank" rel="noreferrer">Officiële website <span aria-hidden="true">↗</span></a>}
+          {zoo.website && <a className="official-website-link" href={zoo.website} target="_blank" rel="noreferrer">Officiële website</a>}
         </div>
       </div>
     </div>
@@ -136,20 +151,20 @@ export function ZooDetail({ zoo, wished, onWish, onBack, onPlan, review, onRevie
       <div className="tab-row" role="tablist" aria-label="Informatie over deze dierenplek">{tabs.map((item) => <button key={item} role="tab" aria-selected={tab === item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>{item}</button>)}</div>
 
       <div className="tab-panel">
-        {tab === "Overzicht" && <div className="detail-content-grid"><article className="detail-story-card"><span className="eyebrow">WAAROM HIERHEEN?</span><h2>Alles wat je vooraf wilt weten</h2><p>{zoo.about}</p>{enrichmentLoading ? <p className="detail-loading">Informatie wordt geladen…</p> : enrichment.summary && <><p>{enrichment.summary}</p>{enrichment.summarySource && <a className="detail-source-link" href={enrichment.summarySource} target="_blank" rel="noreferrer">Bron bekijken ↗</a>}</>}</article><aside className="potential-card"><span className="eyebrow">UITJE-SCORE</span><RatingRow label="Romantisch" icon="♥" value={zoo.potential.romantic} /><RatingRow label="Dieren" icon="🐾" value={zoo.potential.animals} /><RatingRow label="Eten" icon="🍴" value={zoo.potential.food} /><RatingRow label="Reis" icon="🚗" value={zoo.potential.travel} /></aside></div>}
+        {tab === "Overzicht" && <div className="detail-content-grid"><article className="detail-story-card"><span className="eyebrow">WAAROM HIERHEEN?</span><h2>Alles wat je vooraf wilt weten</h2><p>{zoo.about}</p>{enrichmentLoading ? <p className="detail-loading">Informatie wordt geladen…</p> : enrichment.summary && <><p>{enrichment.summary}</p>{enrichment.summarySource && <a className="detail-source-link" href={enrichment.summarySource} target="_blank" rel="noreferrer">Bron bekijken</a>}</>}</article><aside className="potential-card"><span className="eyebrow">UITJE-SCORE</span><RatingRow label="Romantisch" icon="♥" value={zoo.potential.romantic} /><RatingRow label="Dieren" icon="🐾" value={zoo.potential.animals} /><RatingRow label="Eten" icon="🍴" value={zoo.potential.food} /><RatingRow label="Reis" icon="🚗" value={zoo.potential.travel} /></aside></div>}
 
         {tab === "Dieren" && <section className="animals-section">
           <div className="animals-heading"><span className="eyebrow">DIERENOVERZICHT</span><h2>Welke dieren kun je hier ontmoeten?</h2><p>De dierenlijst komt waar mogelijk rechtstreeks van de officiële dierenplek. De foto’s zijn afzonderlijke soortfoto’s, zodat het dier op ieder kaartje echt klopt.</p></div>
-          {animalIndex && <div className={`animal-source-card ${animalIndex.status}`}><span><i aria-hidden="true" />{animalIndex.status === "official" ? "GECONTROLEERD VIA OFFICIËLE WEBSITE" : animalIndex.status === "curated" ? "TIJDELIJKE HIGHLIGHTS" : "GEEN BETROUWBARE LIJST"}</span>{animalIndex.sourceUrl ? <a href={animalIndex.sourceUrl} target="_blank" rel="noreferrer">{animalIndex.sourceName} ↗</a> : <strong>{animalIndex.sourceName}</strong>}</div>}
-          {animalsLoading ? <div className="animal-photo-loading">Officiële dierenlijst en soortfoto’s worden geladen…</div> : animalMedia.length > 0 && <><h3 className="animal-section-title">Een paar bewoners uitgelicht</h3><div className="animal-photo-grid">{animalMedia.map((media) => <a key={media.title} href={media.sourceUrl} target="_blank" rel="noreferrer" aria-label={`${media.title}: open de bron van deze soortfoto`}><div className="animal-photo-frame"><img src={media.thumbnailUrl} alt={`Soortfoto van ${media.title}`} loading="lazy" /><span>SOORTFOTO</span></div><div className="animal-photo-caption"><strong>{media.title}</strong><small>{media.credit} ↗</small></div></a>)}</div></>}
+          {animalIndex && <div className={`animal-source-card ${animalIndex.status}`}><span><i aria-hidden="true" />{animalIndex.status === "official" ? "GECONTROLEERD VIA OFFICIËLE WEBSITE" : animalIndex.status === "curated" ? "TIJDELIJKE HIGHLIGHTS" : "GEEN BETROUWBARE LIJST"}</span>{animalIndex.sourceUrl ? <a href={animalIndex.sourceUrl} target="_blank" rel="noreferrer">{animalIndex.sourceName}</a> : <strong>{animalIndex.sourceName}</strong>}</div>}
+          {animalsLoading ? <div className="animal-photo-loading">Officiële dierenlijst en soortfoto’s worden geladen…</div> : animalMedia.length > 0 && <><h3 className="animal-section-title">Een paar bewoners uitgelicht</h3><div className="animal-photo-grid">{animalMedia.map((media) => <a key={media.title} href={media.sourceUrl} target="_blank" rel="noreferrer" aria-label={`${media.title}: open de bron van deze soortfoto`}><div className="animal-photo-frame"><img src={media.thumbnailUrl} alt={`Soortfoto van ${media.title}`} loading="lazy" /><span>SOORTFOTO</span></div><div className="animal-photo-caption"><strong>{media.title}</strong><small>{media.credit}</small></div></a>)}</div></>}
           {!animalsLoading && animalNames.length > 0 && <div className="animal-list-panel"><div className="animal-list-head"><div><span className="eyebrow">BEKENDE DIEREN</span><h3>{animalNames.length} {animalNames.length === 1 ? "dier" : "dieren"} gevonden</h3></div>{animalNames.length > 12 && <label className="animal-search"><span className="sr-only">Zoek in de dierenlijst</span><input type="search" value={animalSearch} onChange={(event) => setAnimalSearch(event.target.value)} placeholder="Zoek een dier…" /></label>}</div><div className="animal-name-list">{visibleAnimalNames.map((animal) => <span key={animal}>{animal}</span>)}</div>{!animalSearch && filteredAnimalNames.length > 24 && <button className="animal-show-all" onClick={() => setShowAllAnimals((current) => !current)}>{showAllAnimals ? "Toon minder" : `Toon alle ${filteredAnimalNames.length} dieren`}</button>}{animalSearch && filteredAnimalNames.length === 0 && <p className="animal-no-results">Geen dier gevonden met “{animalSearch}”.</p>}</div>}
-          {!animalsLoading && animalNames.length === 0 && <div className="animal-empty-state"><span aria-hidden="true">🐾</span><div><h3>Hier is nog geen betrouwbare dierenlijst</h3><p>De officiële website publiceert geen lijst die de app veilig kan uitlezen. We laten dit bewust leeg, zodat je geen verkeerde dieren te zien krijgt.</p>{zoo.website && <a href={zoo.website} target="_blank" rel="noreferrer">Bekijk de officiële website ↗</a>}</div></div>}
+          {!animalsLoading && animalNames.length === 0 && <div className="animal-empty-state"><span aria-hidden="true">🐾</span><div><h3>Hier is nog geen betrouwbare dierenlijst</h3><p>De officiële website publiceert geen lijst die de app veilig kan uitlezen. We laten dit bewust leeg, zodat je geen verkeerde dieren te zien krijgt.</p>{zoo.website && <a href={zoo.website} target="_blank" rel="noreferrer">Bekijk de officiële website</a>}</div></div>}
           {animalIndex && <p className="detail-freshness-note">{animalIndex.note} Dieren kunnen door seizoen, verzorging of verhuizing tijdelijk niet zichtbaar zijn.</p>}
         </section>}
 
         {tab === "Bezoekinfo" && <section className="visit-section">
-          <div className="today-hours-card"><span className="eyebrow">VANDAAG</span><h2>{todayHours === "Niet opgegeven" ? "Geen actuele tijden beschikbaar" : `Geopend: ${todayHours}`}</h2><p>{zoo.address || `${zoo.name}, ${zoo.city}`}</p><RouteMenu zoo={zoo} /></div>
-          <div className="week-hours-card"><h3>Openingstijden deze week</h3><ul>{schedule.map((day, index) => <li className={index === todayIndex ? "today" : ""} key={day.code}><span>{day.label}</span><strong>{day.hours}</strong></li>)}</ul>{!zoo.openingHours && zoo.website && <a href={zoo.website} target="_blank" rel="noreferrer">Officiële openingstijden ↗</a>}</div>
+          <div className="today-hours-card"><span className="eyebrow">VANDAAG</span><h2>{checkingHours ? "Openingstijden controleren…" : todayHours === "Niet opgegeven" ? "Controleer de tijden bij de locatie" : `Geopend: ${todayHours}`}</h2><p>{zoo.address || `${zoo.name}, ${zoo.city}`}</p><RouteMenu zoo={zoo} /></div>
+          <div className="week-hours-card"><h3>Openingstijden deze week</h3><ul>{schedule.map((day, index) => <li className={index === todayIndex ? "today" : ""} key={day.code}><span>{day.label}</span><strong>{day.hours}</strong></li>)}</ul>{hoursResult.sourceUrl && <a href={hoursResult.sourceUrl} target="_blank" rel="noreferrer">Bron: {hoursResult.sourceName}</a>}{!effectiveOpeningHours && hoursResult.googleUrl && <a href={hoursResult.googleUrl} target="_blank" rel="noreferrer">Controleer openingstijden via Google</a>}{!effectiveOpeningHours && !hoursResult.googleUrl && zoo.website && <a href={zoo.website} target="_blank" rel="noreferrer">Officiële openingstijden</a>}</div>
           <div className="visit-practical-card"><h3>Praktische informatie</h3><p>{zoo.infoText}</p><dl><div><dt>Afstand</dt><dd>{zoo.distance >= 999 ? "Nog niet berekend" : `${zoo.distance} km`}</dd></div><div><dt>Contact</dt><dd>{zoo.phone || "Via de officiële aanbieder"}</dd></div></dl></div>
           <LiveTicketPrices zoo={zoo} />
         </section>}

@@ -93,17 +93,17 @@ export function LiveTicketPrices({ zoo }: { zoo: Zoo }) {
         <p>{payload.note}</p>
       </div>
       <div className="live-price-footer">
-        <p>Gecontroleerd om {checked} bij <a href={payload.sourceUrl} target="_blank" rel="noreferrer">{payload.sourceName} ↗</a></p>
+        <p>Gecontroleerd om {checked} bij <a href={payload.sourceUrl} target="_blank" rel="noreferrer">{payload.sourceName}</a></p>
         <div>
           <button type="button" onClick={() => setRefresh((value) => value + 1)}>↻ Opnieuw controleren</button>
-          <a className="primary" href={payload.bookingUrl} target="_blank" rel="noreferrer">Beschikbaarheid & tickets ↗</a>
+          <a className="primary" href={payload.bookingUrl} target="_blank" rel="noreferrer">Beschikbaarheid en tickets</a>
         </div>
       </div>
     </>}
 
     {!loading && !failed && !payload && <div className="live-price-message"><strong>Geen gekoppelde officiële prijsbron</strong><p>Voor deze dierenplek hebben we nog geen veilige live koppeling. We laten daarom geen voorbeeldprijs zien.</p></div>}
 
-    {failed && <div className="live-price-footer"><p>De officiële website blijft de bron van waarheid.</p><div><button type="button" onClick={() => setRefresh((value) => value + 1)}>↻ Probeer opnieuw</button>{zoo.website && <a className="primary" href={zoo.website} target="_blank" rel="noreferrer">Officiële website ↗</a>}</div></div>}
-    {!loading && !failed && !payload && zoo.website && <div className="live-price-footer"><p>Controleer de gekozen datum rechtstreeks bij de locatie.</p><div><a className="primary" href={zoo.website} target="_blank" rel="noreferrer">Officiële ticketpagina ↗</a></div></div>}
+    {failed && <div className="live-price-footer"><p>De officiële website blijft de bron van waarheid.</p><div><button type="button" onClick={() => setRefresh((value) => value + 1)}>Opnieuw proberen</button>{zoo.website && <a className="primary" href={zoo.website} target="_blank" rel="noreferrer">Officiële website</a>}</div></div>}
+    {!loading && !failed && !payload && zoo.website && <div className="live-price-footer"><p>Controleer de gekozen datum rechtstreeks bij de locatie.</p><div><a className="primary" href={zoo.website} target="_blank" rel="noreferrer">Officiële ticketpagina</a></div></div>}
   </section>;
 }

@@ -22,6 +22,13 @@
       "when": 1787086597551,
       "tag": "0002_normal_bullseye",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1787097362007,
+      "tag": "0003_slippery_malice",
+      "breakpoints": true
     }
   ]
 }

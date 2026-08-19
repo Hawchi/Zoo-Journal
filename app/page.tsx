@@ -4,12 +4,15 @@ import { bucketList, zoos, type Zoo } from "./zoo-data";
 import { ZooCard } from "./components/ZooCard";
 import { ZooDetail } from "./components/ZooDetail";
 import { ZooPhoto } from "./components/ZooPhoto";
+import { VisitDialog } from "./components/VisitDialog";
+import { TripWeather } from "./components/TripWeather";
 import { REVIEW_STORAGE_KEY, type ReviewMap, type ReviewScores, type UserReview } from "./reviews";
 import { MEMORY_STORAGE_KEY, type UserMemory } from "./memories";
 import { ACTIVE_PROFILE_STORAGE_KEY, COUPLE_PROFILE_STORAGE_KEY, PLANS_STORAGE_KEY, defaultCoupleProfiles, defaultPackingList, type CoupleProfile, type PlannedTrip } from "./plans";
 import { CoupleAccess, CoupleBar, CoupleSettings, type AccountMode } from "./components/CoupleAccount";
 import { CUSTOM_PLACES_KEY, DISCOVERED_PLACES_KEY, DISCOVERED_PLACES_REFRESHED_KEY, VISITED_KEY, WISHLIST_KEY, createCustomPlace, findPlaceCoordinates, knownCoordinates, loadAllAnimalPlaces, repairAnimalPlaceCategory } from "./place-service";
 import { distanceFromUser, googleMapsDirectionsUrl, wazeDirectionsUrl, type UserCoordinates } from "./route-links";
+import { VISITS_STORAGE_KEY, type VisitMap, type ZooVisit } from "./visits";
 
 type View = "home" | "explore" | "detail" | "planner" | "journey" | "rankings" | "memories" | "wishlist" | "settings";
 const flagEmoji: Record<string, string> = { NL: "🇳🇱", BE: "🇧🇪", DE: "🇩🇪" };
@@ -18,6 +21,7 @@ const DATABASE_MIGRATION_KEY = "our-zoo-journal-database-migration-v1";
 type JournalPayload = {
   wishes: string[];
   visitedIds: string[];
+  visits: VisitMap;
   reviews: ReviewMap;
   memories: UserMemory[];
   customPlaces: Zoo[];
@@ -40,6 +44,8 @@ export default function App() {
   const [customPlaces, setCustomPlaces] = useState<Zoo[]>([]);
   const [loadedPlaces, setLoadedPlaces] = useState<Zoo[]>([]);
   const [visitedIds, setVisitedIds] = useState<string[]>([]);
+  const [visits, setVisits] = useState<VisitMap>({});
+  const [visitTarget, setVisitTarget] = useState<string | null>(null);
   const [placesLoading, setPlacesLoading] = useState(false);
   const [placesMessage, setPlacesMessage] = useState("");
   const [userLocation, setUserLocation] = useState<UserCoordinates | null>(null);
@@ -97,6 +103,7 @@ export default function App() {
   const applyJournalState = (payload: JournalPayload) => {
     setWishes(payload.wishes || []);
     setVisitedIds(payload.visitedIds || []);
+    setVisits(payload.visits || {});
     setReviews(payload.reviews || {});
     setUserMemories(payload.memories || []);
     setCustomPlaces((payload.customPlaces || []).map(repairAnimalPlaceCategory));
@@ -105,6 +112,7 @@ export default function App() {
   const localJournalSnapshot = () => ({
     wishes: JSON.parse(window.localStorage.getItem(WISHLIST_KEY) || "[]") as string[],
     visitedIds: JSON.parse(window.localStorage.getItem(VISITED_KEY) || "[]") as string[],
+    visits: JSON.parse(window.localStorage.getItem(VISITS_STORAGE_KEY) || "{}") as VisitMap,
     reviews: JSON.parse(window.localStorage.getItem(REVIEW_STORAGE_KEY) || "{}") as ReviewMap,
     memories: (JSON.parse(window.localStorage.getItem(MEMORY_STORAGE_KEY) || "[]") as UserMemory[]).filter((memory) => !memory.id.startsWith("sample-")),
     customPlaces: JSON.parse(window.localStorage.getItem(CUSTOM_PLACES_KEY) || "[]") as Zoo[],
@@ -172,6 +180,8 @@ export default function App() {
       if (savedWishes) setWishes(JSON.parse(savedWishes) as string[]);
       const savedVisited = window.localStorage.getItem(VISITED_KEY);
       if (savedVisited) setVisitedIds(JSON.parse(savedVisited) as string[]);
+      const savedVisits = window.localStorage.getItem(VISITS_STORAGE_KEY);
+      if (savedVisits) setVisits(JSON.parse(savedVisits) as VisitMap);
     } catch {
       // Een beschadigde lokale waarde mag de journal nooit onbruikbaar maken.
     }
@@ -254,12 +264,38 @@ export default function App() {
     else void saveJournalAction({ action: "place-state", zooId: id, wished: next.includes(id) }).catch(() => setAccountError("De wishlist kon niet online worden bijgewerkt."));
     return next;
   });
-  const toggleVisited = (id: string) => setVisitedIds((current) => {
-    const next = current.includes(id) ? current.filter((value) => value !== id) : [...current, id];
-    if (accountMode === "demo") window.localStorage.setItem(VISITED_KEY, JSON.stringify(next));
-    else void saveJournalAction({ action: "place-state", zooId: id, visited: next.includes(id) }).catch(() => setAccountError("Bezocht kon niet online worden bijgewerkt."));
-    return next;
-  });
+  const openVisit = (id: string) => setVisitTarget(id);
+  const saveVisit = (visit: ZooVisit) => {
+    const nextVisits = { ...visits, [visit.zooId]: visit };
+    const nextVisitedIds = visitedIds.includes(visit.zooId) ? visitedIds : [...visitedIds, visit.zooId];
+    setVisits(nextVisits);
+    setVisitedIds(nextVisitedIds);
+    setVisitTarget(null);
+    if (accountMode === "demo") {
+      window.localStorage.setItem(VISITS_STORAGE_KEY, JSON.stringify(nextVisits));
+      window.localStorage.setItem(VISITED_KEY, JSON.stringify(nextVisitedIds));
+    } else {
+      void saveJournalAction({ action: "visit", visit }, true).catch(() => setAccountError("De bezoekgegevens konden niet online worden opgeslagen."));
+    }
+  };
+  const removeVisit = (zooId: string) => {
+    const nextVisits = { ...visits };
+    delete nextVisits[zooId];
+    const nextVisitedIds = visitedIds.filter((id) => id !== zooId);
+    setVisits(nextVisits);
+    setVisitedIds(nextVisitedIds);
+    setVisitTarget(null);
+    if (accountMode === "demo") {
+      window.localStorage.setItem(VISITS_STORAGE_KEY, JSON.stringify(nextVisits));
+      window.localStorage.setItem(VISITED_KEY, JSON.stringify(nextVisitedIds));
+    } else {
+      void fetch(`/api/journal?resource=visit&zooId=${encodeURIComponent(zooId)}`, { method: "DELETE" }).then(async (response) => {
+        const payload = await response.json() as JournalPayload & { error?: string };
+        if (!response.ok) throw new Error(payload.error || "Bezoek verwijderen is niet gelukt.");
+        applyJournalState(payload);
+      }).catch((error) => setAccountError(error instanceof Error ? error.message : "Bezoek verwijderen is niet gelukt."));
+    }
+  };
   const open = (id: string) => {
     setSelected(id);
     setView("detail");
@@ -440,7 +476,7 @@ export default function App() {
       <section className="journal-main">
       <Header profiles={profiles} currentProfileId={activeProfile.id} wishlistCount={wishes.length} requestCount={incomingRequestCount} onLogo={() => setView("home")} onWishlist={() => setView("wishlist")} onAccounts={() => setView("settings")} />
       <CoupleBar profiles={profiles} currentId={activeProfile.id} mode={accountMode} requestCount={incomingRequestCount} onSwitch={switchProfile} onPlanner={() => setView("planner")} onSettings={() => setView("settings")} />
-      {view === "home" && <DashboardHome setView={setView} plan={plan} open={open} places={allPlaces} wishes={wishes} visitedIds={visitedIds} reviews={reviews} onWish={wish} onVisited={toggleVisited} locationActive={Boolean(userLocation)} locating={locating} locationMessage={locationMessage} onLocate={locateUser} />}
+      {view === "home" && <DashboardHome setView={setView} plan={plan} open={open} places={allPlaces} wishes={wishes} visitedIds={visitedIds} visits={visits} reviews={reviews} onWish={wish} onVisited={openVisit} locationActive={Boolean(userLocation)} locating={locating} locationMessage={locationMessage} onLocate={locateUser} />}
       {view === "explore" && (
         <>
           <PageIntro kicker="VIND ONS VOLGENDE AVONTUUR" title="Ontdek dierenplekken" text="Van dichtbij tot roadtrip. Welke dieren gaan we hierna ontmoeten?" animal="monkey" />
@@ -474,7 +510,7 @@ export default function App() {
           </div>
           <section className="zoo-grid">
             {filtered.slice(0, visiblePlaceCount).map((z) => (
-              <ZooCard key={z.id} zoo={z} wished={wishes.includes(z.id)} visited={visitedIds.includes(z.id)} onWish={() => wish(z.id)} onVisited={() => toggleVisited(z.id)} onOpen={() => open(z.id)} />
+              <ZooCard key={z.id} zoo={z} wished={wishes.includes(z.id)} visited={visitedIds.includes(z.id)} onWish={() => wish(z.id)} onVisited={() => openVisit(z.id)} onOpen={() => open(z.id)} />
             ))}
           </section>
           {filtered.length === 0 && <div className="explore-empty">Geen dierenplekken gevonden. Pas je zoekopdracht of filters aan.</div>}
@@ -494,7 +530,7 @@ export default function App() {
         />
       )}
       {view === "planner" && <Planner selected={selected} intent={plannerIntent} places={allPlaces} trips={plannedTrips} currentProfile={activeProfile} partnerProfile={partnerProfile} onSave={savePlannedTrip} onDelete={deletePlannedTrip} onTogglePacking={toggleTripPacking} onRespond={respondToTrip} />}
-      {view === "journey" && <JourneyView places={allPlaces} wishes={wishes} visitedIds={visitedIds} onWish={wish} onVisited={toggleVisited} />}
+      {view === "journey" && <JourneyView places={allPlaces} wishes={wishes} visitedIds={visitedIds} visits={visits} onWish={wish} onVisited={openVisit} />}
       {view === "rankings" && (
         <Rankings
           reviews={reviews}
@@ -512,13 +548,14 @@ export default function App() {
             {allPlaces
               .filter((z) => wishes.includes(z.id))
               .map((z) => (
-                <ZooCard key={z.id} zoo={z} wished visited={visitedIds.includes(z.id)} onWish={() => wish(z.id)} onVisited={() => toggleVisited(z.id)} onOpen={() => open(z.id)} />
+                <ZooCard key={z.id} zoo={z} wished visited={visitedIds.includes(z.id)} onWish={() => wish(z.id)} onVisited={() => openVisit(z.id)} onOpen={() => open(z.id)} />
               ))}
           </section>
         </>
       )}
       {view === "settings" && <Settings profiles={profiles} currentProfileId={activeProfile.id} accountMode={accountMode} inviteCode={inviteCode} onRename={renameProfile} />}
       </section>
+      {visitTarget && allPlaces.find((place) => place.id === visitTarget) && <VisitDialog zoo={allPlaces.find((place) => place.id === visitTarget)!} visit={visits[visitTarget]} onClose={() => setVisitTarget(null)} onSave={saveVisit} onRemove={() => removeVisit(visitTarget)} />}
       <Nav view={view} go={setView} />
     </main>
   );
@@ -862,7 +899,7 @@ function JourneyMap({
   );
 }
 
-function DashboardHome({ setView, plan, open, places, wishes, visitedIds, reviews, onWish, onVisited, locationActive, locating, locationMessage, onLocate }: { setView: (v: View) => void; plan: (id?: string) => void; open: (id: string) => void; places: Zoo[]; wishes: string[]; visitedIds: string[]; reviews: ReviewMap; onWish: (id: string) => void; onVisited: (id: string) => void; locationActive: boolean; locating: boolean; locationMessage: string; onLocate: () => void }) {
+function DashboardHome({ setView, plan, open, places, wishes, visitedIds, visits, reviews, onWish, onVisited, locationActive, locating, locationMessage, onLocate }: { setView: (v: View) => void; plan: (id?: string) => void; open: (id: string) => void; places: Zoo[]; wishes: string[]; visitedIds: string[]; visits: VisitMap; reviews: ReviewMap; onWish: (id: string) => void; onVisited: (id: string) => void; locationActive: boolean; locating: boolean; locationMessage: string; onLocate: () => void }) {
   const visited = places.filter((zoo) => visitedIds.includes(zoo.id));
   const wishlist = places.filter((zoo) => wishes.includes(zoo.id));
   const homePlaces = places.filter((zoo) => visitedIds.includes(zoo.id) || wishes.includes(zoo.id));
@@ -870,7 +907,7 @@ function DashboardHome({ setView, plan, open, places, wishes, visitedIds, review
   const memories = visited.slice(0, 3);
   const reviewedScores = visited.map((zoo) => reviews[zoo.id]?.scores.overall).filter((score): score is number => typeof score === "number");
   const avg = reviewedScores.length ? (reviewedScores.reduce((sum, score) => sum + score, 0) / reviewedScores.length).toFixed(1) : "–";
-  const totalKm = visited.filter((zoo) => zoo.distance < 999).reduce((sum, zoo) => sum + zoo.distance, 0);
+  const totalKm = Object.values(visits).reduce((sum, visit) => sum + visit.kilometers, 0);
   return (
     <div className="dashboard-page">
       <header className="dashboard-title">
@@ -882,7 +919,7 @@ function DashboardHome({ setView, plan, open, places, wishes, visitedIds, review
       <section className="dashboard-stats" aria-label="Onze statistieken">
         <div><strong>{visited.length}</strong><span>Bezocht</span></div>
         <div><strong>{wishlist.length}</strong><span>Op de verlanglijst</span></div>
-        <button className="dashboard-stat-button" onClick={onLocate} disabled={locating} title="Bereken hemelsbrede afstanden vanaf je huidige locatie"><strong>{locating ? "…" : locationActive ? `${totalKm.toLocaleString("nl-NL")} km` : "⌖"}</strong><span>{locationActive ? "Som vanaf jouw locatie" : "Afstand berekenen"}</span></button>
+        <button className="dashboard-stat-button" onClick={onLocate} disabled={locating} title="Gebruik je locatie voor afstanden naar nieuwe dierenplekken"><strong>{locating ? "…" : `${totalKm.toLocaleString("nl-NL")} km`}</strong><span>{totalKm ? "Samen gereden" : locationActive ? "Nog geen ritten" : "Locatie instellen"}</span></button>
         <div><strong>★ {avg}</strong><span>Eigen gemiddelde</span></div>
       </section>
       {locationMessage && <p className="dashboard-location-message" role="status">{locationMessage}</p>}
@@ -918,13 +955,13 @@ function DashboardHome({ setView, plan, open, places, wishes, visitedIds, review
   );
 }
 
-function JourneyView({ places, wishes, visitedIds, onWish, onVisited }: { places: Zoo[]; wishes: string[]; visitedIds: string[]; onWish: (id: string) => void; onVisited: (id: string) => void }) {
+function JourneyView({ places, wishes, visitedIds, visits, onWish, onVisited }: { places: Zoo[]; wishes: string[]; visitedIds: string[]; visits: VisitMap; onWish: (id: string) => void; onVisited: (id: string) => void }) {
   const visited = places.filter((zoo) => visitedIds.includes(zoo.id));
-  const totalKm = visited.filter((zoo) => zoo.distance < 999).reduce((sum, zoo) => sum + zoo.distance, 0);
+  const totalKm = Object.values(visits).reduce((sum, visit) => sum + visit.kilometers, 0);
   return <>
     <PageIntro kicker="ONZE AFGELEGDE KILOMETERS" title="Onze reiskaart" text="Sleep, zoom, filter en klik op een pictogram om jullie dierenplekken te bekijken." animal="elephant" />
     <section className="journey-live-card"><JourneyMap places={places} wishes={wishes} visitedIds={visitedIds} onWish={onWish} onVisited={onVisited} /><div className="trip-stats">
-      <div><strong>{totalKm.toLocaleString("nl-NL")}</strong><span>opgetelde kilometers</span></div>
+      <div><strong>{totalKm.toLocaleString("nl-NL")}</strong><span>samen gereden kilometers</span></div>
       <div><strong>{new Set(visited.map((z) => z.country)).size}</strong><span>landen bezocht</span></div>
       <div><strong>{visited.length}</strong><span>dierendates</span></div>
     </div></section>
@@ -999,7 +1036,7 @@ function Planner({ selected, intent, places, trips, currentProfile, partnerProfi
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [done, setDone] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState("2026-09");
-  const [requestApproval, setRequestApproval] = useState(true);
+  const [requestApproval, setRequestApproval] = useState(Boolean(partnerProfile));
   const editorRef = useRef<HTMLElement>(null);
   const chosen = places.find((z) => z.id === zooId) || places[0];
   const activeTrip = trips.find((trip) => trip.id === activeTripId) || null;
@@ -1009,6 +1046,7 @@ function Planner({ selected, intent, places, trips, currentProfile, partnerProfi
   const draftItinerary = tripItinerary({ leave, start }, chosen);
   const sortedTrips = [...trips].sort((a, b) => a.date.localeCompare(b.date) || a.leave.localeCompare(b.leave));
   const incomingRequests = sortedTrips.filter((trip) => trip.approvalStatus === "pending" && trip.requestedFromId === currentProfile.id);
+  const wantsPartnerApproval = Boolean(requestApproval && partnerProfile);
   const profileName = (id?: string | null) => {
     if (id === currentProfile.id) return currentProfile.displayName;
     if (partnerProfile && id === partnerProfile.id) return partnerProfile.displayName;
@@ -1060,7 +1098,7 @@ function Planner({ selected, intent, places, trips, currentProfile, partnerProfi
     const trip: PlannedTrip = {
       id: editingId || (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `trip-${Date.now()}`),
       zooId, date, leave, start: start.trim(), budget, tickets, note: note.trim(), packing,
-      createdAt: existing?.createdAt || new Date().toISOString(), requestApproval,
+      createdAt: existing?.createdAt || new Date().toISOString(), requestApproval: wantsPartnerApproval,
     };
     onSave(trip);
     setCalendarMonth(date.slice(0, 7));
@@ -1126,6 +1164,7 @@ function Planner({ selected, intent, places, trips, currentProfile, partnerProfi
         <div className="planner-layout">
           <form className="paper-form" onSubmit={submitTrip}>
             <label>Dierentuin<select value={zooId} onChange={(event) => setZooId(event.target.value)}>{places.map((zoo) => <option value={zoo.id} key={zoo.id}>{zoo.name}</option>)}</select></label>
+            <TripWeather zoo={chosen} date={date} />
             <div className="form-row">
               <label>Datum<input required type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label>
               <label>Vertrektijd<input required type="time" value={leave} onChange={(event) => setLeave(event.target.value)} /></label>
@@ -1138,13 +1177,13 @@ function Planner({ selected, intent, places, trips, currentProfile, partnerProfi
             <div className="budget-summary"><span>Jullie ingestelde budget</span><strong>€{budget.toFixed(2).replace(".", ",")}</strong><span className="ok">zelf bepaald</span></div>
             <label>Kleine notitie<textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Picknick meenemen, bijpassende outfits…" /></label>
             {partnerProfile && <label className="partner-request-toggle"><input type="checkbox" checked={requestApproval} onChange={(event) => setRequestApproval(event.target.checked)} /><span><strong>Vraag {partnerProfile.displayName} om goedkeuring</strong><small>Er verschijnt een voorstel in het andere account.</small></span></label>}
-            <div className="planner-form-actions">{editingId && <button type="button" className="secondary" onClick={() => resetForm()}>Annuleren</button>}<button className="primary">{editingId ? requestApproval ? "Wijziging voorstellen ♥" : "Wijzigingen opslaan ♥" : requestApproval ? `Voorstel sturen naar ${partnerProfile?.displayName} ♥` : "Uitje opslaan ♥"}</button></div>
-            {done && <p className="success">✓ {requestApproval ? `Voorstel verstuurd naar ${partnerProfile?.displayName}.` : "Uitje staat in jullie kalender!"}</p>}
+            <div className="planner-form-actions">{editingId && <button type="button" className="secondary" onClick={() => resetForm()}>Annuleren</button>}<button className="primary">{editingId ? wantsPartnerApproval ? "Wijziging voorstellen ♥" : "Wijzigingen opslaan ♥" : wantsPartnerApproval ? `Voorstel sturen naar ${partnerProfile?.displayName} ♥` : "Uitje opslaan ♥"}</button></div>
+            {done && <p className="success">✓ {wantsPartnerApproval ? `Voorstel verstuurd naar ${partnerProfile?.displayName}.` : "Uitje staat in jullie kalender!"}</p>}
           </form>
 
           <div className="planner-side">
             <aside className="itinerary-card"><span className="eyebrow">DAGPLANNING</span><h2>Het plan</h2><ol className="itinerary-list">{draftItinerary.map(([time, label]) => <li key={label}><span className="time">{time}</span><span>{label}</span></li>)}</ol></aside>
-            <aside className="checklist"><span className="eyebrow">PACKING LIST</span><h2>Don&rsquo;t forget…</h2>{packing.map((item) => <label key={item.id}><input type="checkbox" checked={item.checked} onChange={() => setPacking((current) => current.map((entry) => entry.id === item.id ? { ...entry, checked: !entry.checked } : entry))} /><span>{item.label}</span></label>)}</aside>
+            <aside className="checklist"><span className="eyebrow">INPAKLIJST</span><h2>Niet vergeten</h2>{packing.map((item) => <label key={item.id}><input type="checkbox" checked={item.checked} onChange={() => setPacking((current) => current.map((entry) => entry.id === item.id ? { ...entry, checked: !entry.checked } : entry))} /><span>{item.label}</span></label>)}</aside>
           </div>
         </div>
       </section>
@@ -1155,11 +1194,12 @@ function Planner({ selected, intent, places, trips, currentProfile, partnerProfi
           <header className="trip-modal-header"><div className="trip-modal-animal"><ZooPhoto animal={activeZoo.animal} alt="" /></div><div><span className="eyebrow">GEPLAND DIERENUITJE</span><h2 id="trip-modal-title">{activeZoo.name}</h2><p>{formatPlannedDate(activeTrip.date, { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · vertrek om {activeTrip.leave}</p></div></header>
           <div className={`trip-approval-banner ${activeTrip.approvalStatus || "approved"}`}>{activeTrip.approvalStatus === "pending" ? canRespondToActive ? <><span><b>{profileName(activeTrip.createdById)} heeft dit voorgesteld</b><small>Wil je dit samen plannen?</small></span><div><button onClick={() => onRespond(activeTrip.id, "declined")}>Liever niet</button><button className="approve" onClick={() => onRespond(activeTrip.id, "approved")}>Ja, leuk! ♥</button></div></> : <span><b>Voorstel verstuurd</b><small>Wacht op het antwoord van {profileName(activeTrip.requestedFromId)}.</small></span> : activeTrip.approvalStatus === "declined" ? <span><b>Dit voorstel is afgewezen</b><small>De maker kan het aanpassen en opnieuw voorstellen.</small></span> : <span><b>Samen afgesproken ✓</b><small>Dit uitje staat in jullie kalender.</small></span>}</div>
           <div className="trip-modal-facts"><span><small>Startpunt</small><strong>{activeTrip.start}</strong></span><span><small>Budget</small><strong>€{activeTrip.budget}</strong></span><span><small>Tickets</small><strong>{activeTrip.tickets === "ja" ? "Gekocht ✓" : "Nog kopen"}</strong></span></div>
-          <div className="route-action-links trip-route-links"><a href={googleMapsDirectionsUrl(activeZoo)} target="_blank" rel="noreferrer">Route in Google Maps <span>↗</span></a><a href={wazeDirectionsUrl(activeZoo)} target="_blank" rel="noreferrer">Open in Waze <span>↗</span></a></div>
+          <TripWeather zoo={activeZoo} date={activeTrip.date} compact />
+          <div className="route-action-links trip-route-links"><a href={googleMapsDirectionsUrl(activeZoo)} target="_blank" rel="noreferrer">Route in Google Maps</a><a href={wazeDirectionsUrl(activeZoo)} target="_blank" rel="noreferrer">Open in Waze</a></div>
           {activeTrip.note && <p className="trip-modal-note">“{activeTrip.note}”</p>}
           <div className="trip-modal-grid">
             <div><span className="eyebrow">DAGPLANNING</span><h3>Dit gaan we doen</h3><ol className="itinerary-list">{tripItinerary(activeTrip, activeZoo).map(([time, label]) => <li key={label}><span className="time">{time}</span><span>{label}</span></li>)}</ol></div>
-            <div><span className="eyebrow">PACKING LIST</span><h3>Klaar voor vertrek?</h3><div className="trip-modal-checklist">{activeTrip.packing.map((item) => <label key={item.id}><input type="checkbox" checked={item.checked} onChange={() => onTogglePacking(activeTrip.id, item.id)} /><span>{item.label}</span></label>)}</div></div>
+            <div><span className="eyebrow">INPAKLIJST</span><h3>Klaar voor vertrek?</h3><div className="trip-modal-checklist">{activeTrip.packing.map((item) => <label key={item.id}><input type="checkbox" checked={item.checked} onChange={() => onTogglePacking(activeTrip.id, item.id)} /><span>{item.label}</span></label>)}</div></div>
           </div>
           <footer className="trip-modal-actions">
             {canManageActive && (confirmDelete ? <div className="trip-delete-confirm"><span>Deze planning verwijderen?</span><button onClick={() => setConfirmDelete(false)}>Nee</button><button className="danger" onClick={() => { onDelete(activeTrip.id); setActiveTripId(null); setConfirmDelete(false); }}>Ja, verwijderen</button></div> : <button className="trip-delete-button" onClick={() => setConfirmDelete(true)}>Verwijderen</button>)}
@@ -1568,7 +1608,8 @@ function Nav({ view, go }: { view: View; go: (v: View) => void }) {
     ["explore", "paw", "Ontdek"],
     ["planner", "calendar", "Plannen"],
     ["journey", "map", "Kaart"],
-    ["memories", "camera", "Herinneringen"],
+    ["rankings", "trophy", "Ranglijst"],
+    ["memories", "camera", "Foto’s"],
   ];
   return (
     <nav className="bottom-nav" aria-label="Hoofdnavigatie">

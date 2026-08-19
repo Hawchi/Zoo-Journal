@@ -52,7 +52,7 @@ export function ZooCard({
           ))}
         </div>
         <footer className="zoo-card-actions">
-          <button className={`visited-card-button ${visited ? "active" : ""}`} onClick={onVisited}>{visited ? "✓ Bezocht" : "Ben ik geweest?"}</button>
+          <button className={`visited-card-button ${visited ? "active" : ""}`} onClick={onVisited}>{visited ? "Bezoekgegevens" : "Bezoek registreren"}</button>
           <button className="zoo-open-button" onClick={onOpen}>Bekijk details →</button>
         </footer>
       </div>

@@ -35,6 +35,8 @@ export async function ensureCoupleTables() {
     db.prepare("CREATE INDEX IF NOT EXISTS idx_shared_trips_requested_status ON shared_trips(requested_from_user_id, approval_status)"),
     db.prepare("CREATE INDEX IF NOT EXISTS idx_shared_trips_date ON shared_trips(date)"),
     db.prepare("CREATE TABLE IF NOT EXISTS shared_place_states (zoo_id TEXT PRIMARY KEY, wished INTEGER NOT NULL DEFAULT 0, visited INTEGER NOT NULL DEFAULT 0, updated_by_user_id TEXT NOT NULL, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
+    db.prepare("CREATE TABLE IF NOT EXISTS shared_visits (zoo_id TEXT PRIMARY KEY, visit_date TEXT NOT NULL, start_point TEXT NOT NULL, distance_km REAL NOT NULL DEFAULT 0, updated_by_user_id TEXT NOT NULL, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
+    db.prepare("CREATE INDEX IF NOT EXISTS idx_shared_visits_visit_date ON shared_visits(visit_date)"),
     db.prepare("CREATE TABLE IF NOT EXISTS shared_reviews (zoo_id TEXT PRIMARY KEY, visit_date TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '', scores_json TEXT NOT NULL, updated_by_user_id TEXT NOT NULL, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
     db.prepare("CREATE TABLE IF NOT EXISTS shared_memories (id TEXT PRIMARY KEY, zoo_id TEXT NOT NULL, visit_date TEXT NOT NULL DEFAULT '', caption TEXT NOT NULL, note TEXT NOT NULL DEFAULT '', image_key TEXT, created_by_user_id TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"),
     db.prepare("CREATE INDEX IF NOT EXISTS idx_shared_memories_visit_date ON shared_memories(visit_date)"),

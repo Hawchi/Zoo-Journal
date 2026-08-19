@@ -48,4 +48,22 @@
   .memory-reader-copy p{font-size:15px}
   .memory-card-tools{opacity:1;transform:none;right:14px;top:14px}.memory-card-tools button{width:36px;height:36px;min-height:36px!important}
 }
+@media(max-width:520px){
+  .memory-toolbar,.memory-status{margin-left:12px;margin-right:12px}
+  .memory-toolbar{padding:15px;border-radius:19px;text-align:center}.memory-toolbar strong{font-size:18px}.memory-toolbar span{font-size:12px;line-height:1.45}
+  .memory-grid{margin:0 12px 45px;grid-template-columns:1fr;gap:18px}
+  .memory{width:100%;min-width:0;padding:10px 10px 18px;border-radius:13px;transform:none!important}
+  .memory.m1,.memory.m2,.memory.m3{margin-top:0;transform:none!important}
+  .memory>div{height:auto;aspect-ratio:4/3;border-radius:10px}
+  .memory h3{font-size:21px;margin:5px 2px}.memory p{font-size:13px;margin-left:2px;margin-right:2px}.memory>small{margin-left:2px}
+  .memory-card-tools{right:18px;top:18px}.memory-open-hint{margin-left:2px}
+  .add-memory{min-height:190px;border-radius:20px}
+  .memory-modal-backdrop{align-items:end;padding:0}
+  .memory-modal{width:100%;max-height:94dvh!important;border-radius:24px 24px 0 0!important;margin:0!important}
+  .memory-form.memory-modal{padding:16px}
+  .memory-form-heading{margin-bottom:13px}.memory-form-heading h2{font-size:24px}
+  .memory-form-grid{gap:14px}.memory-upload{min-height:175px}.memory-upload img{min-height:175px}
+  .memory-fields input,.memory-fields select,.memory-fields textarea{width:100%;min-width:0;font-size:16px}
+  .memory-reader.memory-modal{padding:10px}.memory-reader-visual{min-height:220px;max-height:285px}.memory-reader-copy{padding:20px 10px 12px}.memory-reader-copy h2{font-size:25px}
+}
 @media(prefers-reduced-motion:reduce){.memory-modal-backdrop,.memory-modal,.memory,.memory>div img,.add-memory,.add-memory b{animation:none!important;transition:none!important}}

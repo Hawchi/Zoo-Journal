@@ -47,3 +47,10 @@
   .ranking-list article.review-row{grid-template-columns:28px 50px minmax(0,1fr) 52px;gap:9px}
   .ranking-list article.review-row .rank-review-button{grid-column:3 / -1;width:100%}
 }
+@media(max-width:520px){
+  .rankings-toolbar,.review-success,.review-form-card{margin-left:12px;margin-right:12px}
+  .rankings-tabs,.ranking-list{margin-left:12px;margin-right:12px}
+  .rankings-tabs{flex-wrap:nowrap;overflow-x:auto;padding-bottom:5px;scrollbar-width:none}.rankings-tabs button{flex:0 0 auto}
+  .ranking-list article.review-row{grid-template-columns:24px 44px minmax(0,1fr) 46px;padding:10px 9px;gap:7px}
+  .ranking-list h3{font-size:15px}.score{font-size:18px}
+}

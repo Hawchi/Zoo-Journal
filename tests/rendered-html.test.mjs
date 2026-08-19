@@ -45,8 +45,8 @@ test("keeps account and shared-plan storage wired to the site", async () => {
   assert.ok(migrations.some((file) => file.endsWith(".sql")));
 });
 
-test("stores the shared journal and memory photos online", async () => {
-  const [page, journalApi, journalDb, mediaApi, hosting, schema, migrations] = await Promise.all([
+test("stores the shared journal, visits and memory photos online", async () => {
+  const [page, journalApi, journalDb, mediaApi, hosting, schema, memoriesMigration, visitsMigration] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/journal/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/_shared/journal-db.ts", import.meta.url), "utf8"),
@@ -54,6 +54,7 @@ test("stores the shared journal and memory photos online", async () => {
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
     readFile(new URL("../drizzle/0002_normal_bullseye.sql", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0003_slippery_malice.sql", import.meta.url), "utf8"),
   ]);
   assert.match(page, /DATABASE_MIGRATION_KEY/);
   assert.match(page, /loadSharedJournal/);
@@ -62,11 +63,41 @@ test("stores the shared journal and memory photos online", async () => {
   assert.match(journalDb, /shared_reviews/);
   assert.match(journalDb, /shared_memories/);
   assert.match(journalDb, /shared_custom_places/);
+  assert.match(journalDb, /shared_visits/);
+  assert.match(journalDb, /saveVisit/);
   assert.match(journalDb, /mediaBucket\(\)\.put/);
   assert.match(mediaApi, /Cache-Control/);
   assert.match(hosting, /"r2": "MEDIA"/);
   assert.match(schema, /sharedMemories/);
-  assert.match(migrations, /CREATE TABLE `shared_memories`/);
+  assert.match(schema, /sharedVisits/);
+  assert.match(memoriesMigration, /CREATE TABLE `shared_memories`/);
+  assert.match(visitsMigration, /CREATE TABLE `shared_visits`/);
+});
+
+test("keeps the mobile journal responsive and makes visits useful", async () => {
+  const [page, visitDialog, weather, hours, globals, planner, memories, reviews] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/VisitDialog.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/weather/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/hours/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/planner.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/memories.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/reviews.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /Ranglijst/);
+  assert.match(page, /<TripWeather/);
+  assert.match(page, /useState\(Boolean\(partnerProfile\)\)/);
+  assert.match(visitDialog, /Datum van het bezoek/);
+  assert.match(visitDialog, /Vertrokken vanaf/);
+  assert.match(visitDialog, /Gereden kilometers in totaal/);
+  assert.match(weather, /api\.open-meteo\.com/);
+  assert.match(hours, /openingHoursSpecification/);
+  assert.match(hours, /google\.com\/search/);
+  assert.match(globals, /grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/);
+  assert.match(planner, /\.trip-weather/);
+  assert.match(memories, /\.memory-modal/);
+  assert.match(reviews, /\.rankings-tabs/);
 });
 
 test("keeps zoos, animal parks and petting zoos in separate filters", async () => {
@@ -152,6 +183,6 @@ test("publishes the red panda as the Apple home-screen icon", async () => {
   assert.match(layout, /apple-touch-icon-precomposed/);
   assert.match(manifest, /app-icon-192-v2\.png/);
   assert.match(manifest, /app-icon-512-v2\.png/);
-  assert.match(serviceWorker, /zoo-journal-v13/);
+  assert.match(serviceWorker, /zoo-journal-v14/);
   assert.match(serviceWorker, /apple-touch-icon-v2\.png/);
 });

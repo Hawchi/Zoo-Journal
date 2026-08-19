@@ -1,4 +1,4 @@
-import { deleteMemory, importLocalJournal, journalState, saveCustomPlace, saveMemory, saveReview, setPlaceState } from "../_shared/journal-db";
+import { deleteMemory, deleteVisit, importLocalJournal, journalState, saveCustomPlace, saveMemory, saveReview, saveVisit, setPlaceState } from "../_shared/journal-db";
 import { requireMember } from "../_shared/couple-db";
 
 export async function GET() {
@@ -16,6 +16,8 @@ export async function POST(request: Request) {
       await setPlaceState(auth.member.userId, body.zooId, { wished: typeof body.wished === "boolean" ? body.wished : undefined, visited: typeof body.visited === "boolean" ? body.visited : undefined });
     } else if (body.action === "review") {
       await saveReview(auth.member.userId, body.review as Parameters<typeof saveReview>[1]);
+    } else if (body.action === "visit") {
+      await saveVisit(auth.member.userId, body.visit as Parameters<typeof saveVisit>[1]);
     } else if (body.action === "memory") {
       await saveMemory(auth.member.userId, body.memory as Parameters<typeof saveMemory>[1]);
     } else if (body.action === "custom-place") {
@@ -36,8 +38,10 @@ export async function DELETE(request: Request) {
   if ("error" in auth) return auth.error;
   try {
     const url = new URL(request.url);
-    if (url.searchParams.get("resource") !== "memory") return Response.json({ error: "Onbekend onderdeel." }, { status: 400 });
-    await deleteMemory(url.searchParams.get("id"));
+    const resource = url.searchParams.get("resource");
+    if (resource === "memory") await deleteMemory(url.searchParams.get("id"));
+    else if (resource === "visit") await deleteVisit(auth.member.userId, url.searchParams.get("zooId"));
+    else return Response.json({ error: "Onbekend onderdeel." }, { status: 400 });
     return Response.json(await journalState());
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "Verwijderen is niet gelukt." }, { status: 400 });
