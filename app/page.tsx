@@ -935,7 +935,7 @@ function DashboardHome({ setView, plan, open, places, wishes, visitedIds, visits
 
       <section className="dashboard-map-card">
         <JourneyMap compact places={homePlaces} wishes={wishes} visitedIds={visitedIds} onWish={onWish} onVisited={onVisited} />
-        {upcoming && <button className={`next-note-toggle ${noteMinimized ? "minimized" : ""}`} onClick={() => setNoteMinimized((current) => !current)} aria-label={noteMinimized ? "Toon de volgende droomdate" : "Verberg de volgende droomdate"} aria-expanded={!noteMinimized}>{noteMinimized ? "+" : "−"}</button>}
+        {upcoming && <button className={`next-note-toggle ${noteMinimized ? "minimized" : ""}`} onClick={() => setNoteMinimized((current) => !current)} aria-label={noteMinimized ? "Toon de volgende droomdate" : "Verberg de volgende droomdate"} aria-expanded={!noteMinimized}>{noteMinimized && <span className="next-note-label">Volgende droomdate</span>}<span className="next-note-symbol" aria-hidden="true">{noteMinimized ? "+" : "−"}</span></button>}
         {upcoming && !noteMinimized && <button className="next-adventure-note" onClick={() => open(upcoming.id)}>
           <span className="eyebrow">VOLGENDE DROOMDATE</span><strong>{upcoming.name}</strong>
           <small>{upcoming.countryName}<br />{upcoming.distance >= 999 ? "afstand onbekend" : `${upcoming.distance} km`}</small>

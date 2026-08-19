@@ -118,8 +118,11 @@ test("connects registered visits to place details and the mobile journal", async
   assert.match(page, /Vertrekpunt/);
   assert.match(page, /\["memories", "camera", "Dagboek"\]/);
   assert.match(page, /next-note-toggle/);
+  assert.match(page, /Volgende droomdate/);
   assert.match(memoriesCss, /\.visit-journal-card/);
   assert.match(dashboardCss, /\.next-note-toggle/);
+  assert.match(dashboardCss, /\.next-note-label/);
+  assert.match(dashboardCss, /linear-gradient\(120deg,#fff1dcf2,#f8e4cef2\)/);
   assert.match(weatherWidget, /Opnieuw proberen/);
 });
 
@@ -263,6 +266,6 @@ test("publishes the red panda as the Apple home-screen icon", async () => {
   assert.match(layout, /apple-touch-icon-precomposed/);
   assert.match(manifest, /app-icon-192-v2\.png/);
   assert.match(manifest, /app-icon-512-v2\.png/);
-  assert.match(serviceWorker, /zoo-journal-v18/);
+  assert.match(serviceWorker, /zoo-journal-v19/);
   assert.match(serviceWorker, /apple-touch-icon-v2\.png/);
 });
