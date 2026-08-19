@@ -134,6 +134,10 @@ test("keeps zoos, animal parks and petting zoos in separate filters", async () =
   assert.match(map, /data-kind="animal-park">Dierenparken/);
   assert.match(map, /activeKind==='all'\|\|place\.category===activeKind/);
   assert.doesNotMatch(map, /activeKind==='zoo'&&place\.category==='animal-park'/);
+  assert.match(map, /map-filter-shell/);
+  assert.match(map, /touch-action:pan-x/);
+  assert.match(map, /scrollBy\(\{left:/);
+  assert.match(map, /Volgende filters/);
 });
 
 test("preloads and progressively reveals the complete animal-place list", async () => {
@@ -205,6 +209,6 @@ test("publishes the red panda as the Apple home-screen icon", async () => {
   assert.match(layout, /apple-touch-icon-precomposed/);
   assert.match(manifest, /app-icon-192-v2\.png/);
   assert.match(manifest, /app-icon-512-v2\.png/);
-  assert.match(serviceWorker, /zoo-journal-v14/);
+  assert.match(serviceWorker, /zoo-journal-v15/);
   assert.match(serviceWorker, /apple-touch-icon-v2\.png/);
 });
