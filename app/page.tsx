@@ -546,7 +546,7 @@ export default function App() {
           profiles={profiles}
         />
       )}
-      {view === "memories" && <Memories memories={userMemories} onSave={saveMemory} onDelete={deleteMemory} places={allPlaces} />}
+      {view === "memories" && <Memories memories={userMemories} onSave={saveMemory} onDelete={deleteMemory} places={allPlaces} visitedIds={visitedIds} visits={visits} />}
       {view === "wishlist" && (
         <>
           <PageIntro kicker="BEWAARD VOOR LATER" title="Onze wishlist" text={`${wishes.length} wilde dates om samen van te dromen.`} animal="redpanda" />
@@ -1454,10 +1454,13 @@ function Rankings({
   );
 }
 
-function Memories({ memories, onSave, onDelete, places }: { memories: UserMemory[]; onSave: (memory: UserMemory) => Promise<boolean>; onDelete: (id: string) => void; places: Zoo[] }) {
+function Memories({ memories, onSave, onDelete, places, visitedIds, visits }: { memories: UserMemory[]; onSave: (memory: UserMemory) => Promise<boolean>; onDelete: (id: string) => void; places: Zoo[]; visitedIds: string[]; visits: VisitMap }) {
   const [adding, setAdding] = useState(false);
   const [selectedMemory, setSelectedMemory] = useState<UserMemory | null>(null);
   const [zooId, setZooId] = useState(places[0].id);
+  const [placeQuery, setPlaceQuery] = useState("");
+  const [placePickerOpen, setPlacePickerOpen] = useState(false);
+  const [placeError, setPlaceError] = useState("");
   const [date, setDate] = useState("");
   const [caption, setCaption] = useState("");
   const [note, setNote] = useState("");
@@ -1466,6 +1469,23 @@ function Memories({ memories, onSave, onDelete, places }: { memories: UserMemory
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+
+  const visitedPlaceOptions = useMemo(() => {
+    const byId = new Map(places.map((place) => [place.id, place]));
+    const options = visitedIds.length ? visitedIds.flatMap((id) => byId.get(id) ? [byId.get(id)!] : []) : places;
+    return [...options].sort((a, b) => (visits[b.id]?.date || "").localeCompare(visits[a.id]?.date || "") || a.name.localeCompare(b.name, "nl"));
+  }, [places, visitedIds, visits]);
+
+  const selectablePlaces = useMemo(() => {
+    if (visitedPlaceOptions.some((place) => place.id === zooId)) return visitedPlaceOptions;
+    const current = places.find((place) => place.id === zooId);
+    return current ? [current, ...visitedPlaceOptions] : visitedPlaceOptions;
+  }, [places, visitedPlaceOptions, zooId]);
+
+  const matchingPlaces = useMemo(() => {
+    const query = placeQuery.trim().toLocaleLowerCase("nl");
+    return selectablePlaces.filter((place) => !query || `${place.name} ${place.city}`.toLocaleLowerCase("nl").includes(query)).slice(0, 8);
+  }, [placeQuery, selectablePlaces]);
 
   useEffect(() => {
     if (!adding && !selectedMemory) return;
@@ -1485,14 +1505,22 @@ function Memories({ memories, onSave, onDelete, places }: { memories: UserMemory
   }, [adding, selectedMemory]);
 
   const resetForm = () => {
-    setEditingId(null); setZooId(places[0].id); setDate(""); setCaption(""); setNote(""); setImageDataUrl(undefined);
+    const firstPlace = visitedPlaceOptions[0] || places[0];
+    setEditingId(null); setZooId(firstPlace.id); setPlaceQuery(firstPlace.name); setPlacePickerOpen(false); setPlaceError(""); setDate(""); setCaption(""); setNote(""); setImageDataUrl(undefined);
   };
   const openAddMemory = () => {
     resetForm(); setSelectedMemory(null); setStatus(""); setAdding(true);
   };
   const editMemory = (memory: UserMemory) => {
-    setEditingId(memory.id); setZooId(memory.zooId); setDate(memory.date); setCaption(memory.caption); setNote(memory.note); setImageDataUrl(memory.imageDataUrl);
+    const memoryPlace = places.find((place) => place.id === memory.zooId);
+    setEditingId(memory.id); setZooId(memory.zooId); setPlaceQuery(memoryPlace?.name || ""); setPlacePickerOpen(false); setPlaceError(""); setDate(memory.date); setCaption(memory.caption); setNote(memory.note); setImageDataUrl(memory.imageDataUrl);
     setSelectedMemory(null); setPendingDeleteId(null); setStatus(""); setAdding(true);
+  };
+  const selectMemoryPlace = (place: Zoo) => {
+    setZooId(place.id);
+    setPlaceQuery(place.name);
+    setPlaceError("");
+    setPlacePickerOpen(false);
   };
   const openMemory = (memory: UserMemory) => {
     setPendingDeleteId(null);
@@ -1537,11 +1565,17 @@ function Memories({ memories, onSave, onDelete, places }: { memories: UserMemory
 
   const submitMemory = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const chosenPlace = selectablePlaces.find((place) => place.name.toLocaleLowerCase("nl") === placeQuery.trim().toLocaleLowerCase("nl"));
+    if (!chosenPlace) {
+      setPlaceError("Kies een dierenplek uit de zoekresultaten.");
+      setPlacePickerOpen(true);
+      return;
+    }
     setSaving(true);
     const existing = editingId ? memories.find((memory) => memory.id === editingId) : undefined;
     const id = editingId || (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `memory-${Date.now()}`);
     const wasEditing = Boolean(editingId);
-    const saved = await onSave({ id, zooId, date, caption: caption.trim(), note: note.trim(), imageDataUrl, createdAt: existing?.createdAt || new Date().toISOString() });
+    const saved = await onSave({ id, zooId: chosenPlace.id, date, caption: caption.trim(), note: note.trim(), imageDataUrl, createdAt: existing?.createdAt || new Date().toISOString() });
     setSaving(false);
     if (!saved) {
       setStatus("Online opslaan is niet gelukt. Controleer je verbinding en probeer het opnieuw.");
@@ -1570,7 +1604,17 @@ function Memories({ memories, onSave, onDelete, places }: { memories: UserMemory
                 <input type="file" accept="image/*" onChange={choosePhoto} />
               </label>
               <div className="memory-fields">
-                <label>Dierentuin<select value={zooId} onChange={(event) => setZooId(event.target.value)}>{places.map((zoo) => <option value={zoo.id} key={zoo.id}>{zoo.name}</option>)}</select></label>
+                <div className="memory-place-field">
+                  <label htmlFor="memory-place-search">Bij welke dierenplek was dit?</label>
+                  <div className="memory-place-picker">
+                    <input id="memory-place-search" required role="combobox" aria-autocomplete="list" aria-expanded={placePickerOpen} aria-controls="memory-place-results" autoComplete="off" value={placeQuery} placeholder="Typ de naam van de dierenplek" onFocus={() => setPlacePickerOpen(true)} onChange={(event) => { setPlaceQuery(event.target.value); setPlacePickerOpen(true); setPlaceError(""); }} onKeyDown={(event) => { if (event.key === "Enter" && placePickerOpen && matchingPlaces[0]) { event.preventDefault(); selectMemoryPlace(matchingPlaces[0]); } }} />
+                    {placePickerOpen && <div className="memory-place-results" id="memory-place-results" role="listbox">
+                      {matchingPlaces.length ? matchingPlaces.map((place) => <button type="button" role="option" aria-selected={place.id === zooId} key={place.id} onMouseDown={(event) => event.preventDefault()} onClick={() => selectMemoryPlace(place)}><strong>{place.name}</strong><span>{place.city}, {place.country}{visits[place.id]?.date ? ` · bezocht op ${visits[place.id].date}` : ""}</span></button>) : <p>Geen bezochte dierenplek gevonden.</p>}
+                    </div>}
+                  </div>
+                  <small>{visitedIds.length ? `Je ziet alleen jullie ${visitedPlaceOptions.length} geregistreerde bezochte ${visitedPlaceOptions.length === 1 ? "dierenplek" : "dierenplekken"}.` : "Er is nog geen bezoek geregistreerd. Je kunt daarom tijdelijk alle dierenplekken doorzoeken."}</small>
+                  {placeError && <small className="memory-place-error" role="alert">{placeError}</small>}
+                </div>
                 <label>Datum<input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label>
                 <label>Titel<input required value={caption} onChange={(event) => setCaption(event.target.value)} placeholder="Bijvoorbeeld: Onze eerste rode panda" /></label>
                 <label>Jullie verhaal<textarea required rows={4} value={note} onChange={(event) => setNote(event.target.value)} placeholder="Wat maakte deze dag bijzonder?" /></label>

@@ -117,6 +117,20 @@ test("calculates a privacy-conscious driving distance for registered visits", as
   assert.match(placesCss, /\.visit-route-calculator/);
 });
 
+test("keeps the memory place picker short and searchable on phones", async () => {
+  const [page, memoriesCss] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/memories.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /visitedIds=\{visitedIds\}/);
+  assert.match(page, /Bij welke dierenplek was dit\?/);
+  assert.match(page, /role="combobox"/);
+  assert.match(page, /visitedPlaceOptions/);
+  assert.match(page, /slice\(0, 8\)/);
+  assert.match(page, /Geen bezochte dierenplek gevonden/);
+  assert.match(memoriesCss, /\.memory-place-results/);
+});
+
 test("stores separate reviews for both partners and calculates a shared ranking", async () => {
   const [page, reviews, detail, journalDb, schema, migration, reviewCss] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
@@ -226,6 +240,6 @@ test("publishes the red panda as the Apple home-screen icon", async () => {
   assert.match(layout, /apple-touch-icon-precomposed/);
   assert.match(manifest, /app-icon-192-v2\.png/);
   assert.match(manifest, /app-icon-512-v2\.png/);
-  assert.match(serviceWorker, /zoo-journal-v16/);
+  assert.match(serviceWorker, /zoo-journal-v17/);
   assert.match(serviceWorker, /apple-touch-icon-v2\.png/);
 });
