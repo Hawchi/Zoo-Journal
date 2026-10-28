@@ -171,7 +171,9 @@ export async function loadAllAnimalPlacesFromWikidata(): Promise<Zoo[]> {
   const url = new URL("https://query.wikidata.org/sparql");
   url.searchParams.set("query", query);
   url.searchParams.set("format", "json");
-  const response = await fetch(url, { headers: { Accept: "application/sparql-results+json" }, signal: AbortSignal.timeout(30000) });
+  const headers: Record<string, string> = { Accept: "application/sparql-results+json" };
+  if (typeof window === "undefined") headers["User-Agent"] = "ZooJournal/1.0 (https://ons-zoo-dagboek.vercel.app/)";
+  const response = await fetch(url, { headers, signal: AbortSignal.timeout(30000) });
   if (!response.ok) throw new Error("Wikidata reageert niet.");
   const payload = await response.json() as { results?: { bindings?: WikidataBinding[] } };
   const countryByEntity: Record<string, Country> = { Q55: "NL", Q31: "BE", Q183: "DE" };
