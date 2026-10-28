@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { knownCoordinates } from "../place-service";
 import type { Zoo } from "../zoo-data";
+import { useLanguage } from "../i18n";
 
 type WeatherPayload = {
   status: "loading" | "forecast" | "too-early" | "past" | "unavailable";
@@ -13,12 +14,13 @@ type WeatherPayload = {
   message?: string;
 };
 
-function shortDate(value?: string) {
+function shortDate(value: string | undefined, language: "nl" | "en") {
   if (!value) return "";
-  return new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: "long" }).format(new Date(`${value}T12:00:00`));
+  return new Intl.DateTimeFormat(language === "en" ? "en-GB" : "nl-NL", { day: "numeric", month: "long" }).format(new Date(`${value}T12:00:00`));
 }
 
 export function TripWeather({ zoo, date, compact = false }: { zoo: Zoo; date: string; compact?: boolean }) {
+  const { language, t, ui } = useLanguage();
   const [weather, setWeather] = useState<WeatherPayload>({ status: "loading" });
   const [refreshKey, setRefreshKey] = useState(0);
   const latitude = zoo.latitude ?? knownCoordinates[zoo.id]?.[0];
@@ -42,12 +44,12 @@ export function TripWeather({ zoo, date, compact = false }: { zoo: Zoo; date: st
 
   return <aside className={`trip-weather ${compact ? "compact" : ""}`} aria-live="polite">
     <span className={`weather-mark ${visibleWeather.kind || "cloud"}`} aria-hidden="true"><i /></span>
-    <div><small>WEER BIJ {zoo.name.toLocaleUpperCase("nl")}</small>
+    <div><small>{t("WEER BIJ", "WEATHER AT")} {zoo.name.toLocaleUpperCase(language)}</small>
       {visibleWeather.status === "loading" && <><strong>Voorspelling ophalen…</strong><p>Even de locatie en datum controleren.</p></>}
-      {visibleWeather.status === "forecast" && <><strong>{Math.round(visibleWeather.maximum || 0)}° / {Math.round(visibleWeather.minimum || 0)}° · {visibleWeather.label}</strong><p>{visibleWeather.rainChance ?? 0}% kans op neerslag. Ververs bij het openen automatisch.</p></>}
-      {visibleWeather.status === "too-early" && <><strong>Nog te vroeg voor een voorspelling</strong><p>Het live weer verschijnt vanaf {shortDate(visibleWeather.availableFrom)}.</p></>}
-      {visibleWeather.status === "past" && <><strong>Dit bezoek is al geweest</strong><p>{visibleWeather.message}</p></>}
-      {visibleWeather.status === "unavailable" && <><strong>Het weer is tijdelijk niet bereikbaar</strong><p>{visibleWeather.message}</p>{canLoad && <button type="button" className="weather-retry" onClick={() => setRefreshKey((value) => value + 1)}>Opnieuw proberen</button>}</>}
+      {visibleWeather.status === "forecast" && <><strong>{Math.round(visibleWeather.maximum || 0)}° / {Math.round(visibleWeather.minimum || 0)}° · {ui(visibleWeather.label || "")}</strong><p>{t(`${visibleWeather.rainChance ?? 0}% kans op neerslag. Ververs bij het openen automatisch.`, `${visibleWeather.rainChance ?? 0}% chance of rain. Refreshes automatically when opened.`)}</p></>}
+      {visibleWeather.status === "too-early" && <><strong>Nog te vroeg voor een voorspelling</strong><p>{t("Het live weer verschijnt vanaf", "The live forecast will appear from")} {shortDate(visibleWeather.availableFrom, language)}.</p></>}
+      {visibleWeather.status === "past" && <><strong>Dit bezoek is al geweest</strong><p>{ui(visibleWeather.message || "")}</p></>}
+      {visibleWeather.status === "unavailable" && <><strong>Het weer is tijdelijk niet bereikbaar</strong><p>{ui(visibleWeather.message || "")}</p>{canLoad && <button type="button" className="weather-retry" onClick={() => setRefreshKey((value) => value + 1)}>Opnieuw proberen</button>}</>}
     </div>
   </aside>;
 }

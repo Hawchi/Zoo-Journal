@@ -43,7 +43,7 @@ export type Zoo = {
   category?: "zoo" | "aquarium" | "petting-zoo" | "animal-park";
   latitude?: number;
   longitude?: number;
-  source?: "curated" | "openstreetmap" | "custom";
+  source?: "curated" | "openstreetmap" | "wikidata" | "custom";
   openingHours?: string;
   address?: string;
   phone?: string;

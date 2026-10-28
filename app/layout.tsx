@@ -1,25 +1,14 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Pwa } from "./Pwa";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { LanguageProvider } from "./i18n";
 
 export const metadata: Metadata = {
-  title: "Ons Zoo Dagboek",
+  title: "Zoo Journal",
   description: "Plan, ontdek en bewaar iedere dierendate samen.",
-  themeColor: "#40513d",
   appleWebApp: {
     capable: true,
-    title: "Zoo Dagboek",
+    title: "Zoo Journal",
     statusBarStyle: "default",
   },
   icons: {
@@ -36,8 +25,10 @@ export const metadata: Metadata = {
       { rel: "apple-touch-icon-precomposed", url: "/apple-touch-icon-v2.png", sizes: "180x180", type: "image/png" },
     ],
   },
-  manifest: "/manifest.webmanifest",
+  manifest: "/manifest.webmanifest?v=3",
 };
+
+export const viewport: Viewport = { themeColor: "#40513d" };
 
 export default function RootLayout({
   children,
@@ -46,10 +37,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="nl">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <Pwa />{children}
+      <body>
+        <LanguageProvider><Pwa />{children}</LanguageProvider>
       </body>
     </html>
   );

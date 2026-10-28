@@ -1,5 +1,8 @@
+"use client";
+
 import type { Zoo } from "../zoo-data";
 import { ZooPhoto } from "./ZooPhoto";
+import { useLanguage } from "../i18n";
 
 const flagEmoji: Record<string, string> = { NL: "🇳🇱", BE: "🇧🇪", DE: "🇩🇪" };
 
@@ -18,9 +21,10 @@ export function ZooCard({
   visited?: boolean;
   onVisited?: () => void;
 }) {
+  const { t, ui } = useLanguage();
   return (
     <article className="zoo-card">
-      <button className="zoo-photo-frame" onClick={onOpen} aria-label={`Bekijk ${zoo.name}`}>
+      <button className="zoo-photo-frame" onClick={onOpen} aria-label={`${t("Bekijk", "View")} ${zoo.name}`}>
         <ZooPhoto animal={zoo.animal} alt={zoo.name} />
         <span className="flag">
           {flagEmoji[zoo.country]} {zoo.country}
@@ -33,27 +37,27 @@ export function ZooCard({
             onWish();
           }}
           className={`mini-heart ${wished ? "active" : ""}`}
-          aria-label="Verlanglijst"
+          aria-label={t("Verlanglijst", "Wishlist")}
         >
           {wished ? "♥" : "♡"}
         </span>
       </button>
       <div className="zoo-body">
-        <small>{zoo.city} · {zoo.distance >= 999 ? (zoo.category === "aquarium" ? "aquarium" : "kaartlocatie") : `${zoo.distance} km`}</small>
+        <small>{zoo.city} · {zoo.distance >= 999 ? (zoo.category === "aquarium" ? t("aquarium", "aquarium") : t("kaartlocatie", "map location")) : `${zoo.distance} km`}</small>
         <h3>
           <button className="link-reset" onClick={onOpen}>
             {zoo.name}
           </button>
         </h3>
-        <p>{zoo.intro}</p>
+        <p>{ui(zoo.intro)}</p>
         <div className="tags">
           {zoo.highlights.map((x) => (
-            <i key={x}>{x}</i>
+            <i key={x}>{ui(x)}</i>
           ))}
         </div>
         <footer className="zoo-card-actions">
-          <button className={`visited-card-button ${visited ? "active" : ""}`} onClick={onVisited}>{visited ? "Bezoekgegevens" : "Bezoek registreren"}</button>
-          <button className="zoo-open-button" onClick={onOpen}>Bekijk details →</button>
+          <button className={`visited-card-button ${visited ? "active" : ""}`} onClick={onVisited}>{visited ? t("Bezoekgegevens", "Visit details") : t("Bezoek registreren", "Record visit")}</button>
+          <button className="zoo-open-button" onClick={onOpen}>{t("Bekijk details", "View details")} →</button>
         </footer>
       </div>
     </article>

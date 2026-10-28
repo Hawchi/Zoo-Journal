@@ -33,8 +33,8 @@ function textOnly(value?: string) {
   return value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 120) || "Wikimedia Commons";
 }
 
-async function loadSummary(zoo: Zoo) {
-  const language = zoo.country === "DE" ? "de" : "nl";
+async function loadSummary(zoo: Zoo, uiLanguage: "nl" | "en" = "nl") {
+  const language = uiLanguage === "en" ? "en" : zoo.country === "DE" ? "de" : "nl";
   const params = new URLSearchParams({
     action: "query", generator: "search", gsrsearch: zoo.name, gsrlimit: "1", prop: "extracts|info",
     exintro: "1", explaintext: "1", inprop: "url", format: "json", origin: "*",
@@ -66,15 +66,16 @@ async function loadMedia(zoo: Zoo): Promise<PlaceMedia[]> {
   }).slice(0, 6);
 }
 
-export async function loadPlaceEnrichment(zoo: Zoo): Promise<PlaceEnrichment> {
-  const cached = enrichmentCache.get(zoo.id);
+export async function loadPlaceEnrichment(zoo: Zoo, uiLanguage: "nl" | "en" = "nl"): Promise<PlaceEnrichment> {
+  const cacheKey = `${uiLanguage}:${zoo.id}`;
+  const cached = enrichmentCache.get(cacheKey);
   if (cached) return cached;
   const [summary, media] = await Promise.all([
-    loadSummary(zoo).catch(() => ({})),
+    loadSummary(zoo, uiLanguage).catch(() => ({})),
     loadMedia(zoo).catch(() => []),
   ]);
   const enrichment = { ...summary, media };
-  enrichmentCache.set(zoo.id, enrichment);
+  enrichmentCache.set(cacheKey, enrichment);
   return enrichment;
 }
 

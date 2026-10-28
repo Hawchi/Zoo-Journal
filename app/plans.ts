@@ -28,12 +28,12 @@ export type CoupleProfile = {
   role: "owner" | "partner";
 };
 
-export const COUPLE_PROFILE_STORAGE_KEY = "our-zoo-journal-couple-profiles-v1";
-export const ACTIVE_PROFILE_STORAGE_KEY = "our-zoo-journal-active-profile-v1";
+export const COUPLE_PROFILE_STORAGE_KEY = "our-zoo-journal-couple-profiles-v2";
+export const ACTIVE_PROFILE_STORAGE_KEY = "our-zoo-journal-active-profile-v2";
 
 export const defaultCoupleProfiles: CoupleProfile[] = [
-  { id: "paulien", displayName: "Paulien", role: "owner" },
-  { id: "partner", displayName: "Yida", role: "partner" },
+  { id: "gebruiker-a", displayName: "Gebruiker A", role: "owner" },
+  { id: "gebruiker-b", displayName: "Gebruiker B", role: "partner" },
 ];
 
 export const PLANS_STORAGE_KEY = "our-zoo-journal-planned-trips-v1";
