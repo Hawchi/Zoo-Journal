@@ -1,100 +1,115 @@
-# vinext-starter
+# Zoo Journal 🐾
 
-A clean full-stack starter running on
-[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
-Drizzle support.
+<p align="center">
+  <img src="public/app-icon-192-v2.png" alt="Zoo Journal red panda icon" width="120" />
+</p>
 
-## Prerequisites
+<p align="center">
+  A cosy shared journal for planning animal dates, discovering new places and keeping every memory together.
+</p>
 
-- Node.js `>=22.13.0`
+<p align="center">
+  <a href="https://ons-zoo-dagboek.vercel.app/"><strong>Open the live app</strong></a>
+</p>
 
-## Quick Start
+Zoo Journal is a responsive bilingual web app and installable PWA for two people. It combines a zoo and animal-place explorer with trip planning, shared reviews, rankings, memories and a journey map. The interface is inspired by pastel watercolour illustrations and a warm scrapbook aesthetic.
+
+## Features
+
+- Explore zoos, aquariums, petting zoos and other animal places in the Netherlands, Belgium and Germany
+- Search, filter and sort the animal-place catalogue
+- View locations on an interactive map
+- Save places to a shared wishlist
+- Register visits with a date, departure point and travelled distance
+- Plan dates with an itinerary, budget, tickets and packing list
+- Send a plan to your partner for approval
+- Create separate reviews and compare combined rankings
+- Add, edit and remove shared memories with photos
+- Use the app in Dutch or English
+- Install the app on iPhone, Android and desktop as a PWA
+
+## Shared accounts and privacy
+
+Each person signs in with their own email address. One person creates a journal and receives a pairing code. The second person uses that code to join the same journal.
+
+The source code in this repository is public, but personal journal data is not. Supabase Row Level Security ensures that trips, visits, reviews, memories and uploaded photos are only available to members of the linked journal.
+
+## Tech stack
+
+- Next.js 16
+- React 19 and TypeScript
+- Supabase Authentication, PostgreSQL and Storage
+- OpenStreetMap and Leaflet
+- Wikidata for the live animal-place catalogue
+- Vercel for hosting
+
+## Run locally
+
+### Requirements
+
+- Node.js 22.13 or newer
+- A Supabase project
+
+### Installation
 
 ```bash
+git clone https://github.com/Hawchi/Zoo-Journal.git
+cd Zoo-Journal
 npm install
+```
+
+Create a `.env.local` file:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+```
+
+Run these migrations in the Supabase SQL editor, in order:
+
+1. `supabase/migrations/202610210001_zoo_journal.sql`
+2. `supabase/migrations/202610210002_fix_invite_code.sql`
+
+Start the development server:
+
+```bash
 npm run dev
-npm run build
 ```
 
-This starter does not use `wrangler.jsonc`.
+Open [http://localhost:3000](http://localhost:3000).
 
-## Included Shape
+## Supabase authentication
 
-- edit site code under `app/`
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/schema.ts` starts intentionally empty
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
+Add the following URLs to the redirect allow list in Supabase Authentication:
 
-## Workspace Auth Headers
-
-Signed-in visitors receive both `oai-authenticated-user-id` and `oai-authenticated-user-email`. Private Sites require every visitor to sign in; public Sites may also have anonymous visitors, for whom neither header is present.
-
-The user ID is stable for the same user on the same Site and different across Sites. Email and name are intended for display or contact purposes.
-
-SIWC-authenticated workspace sites may also receive
-`oai-authenticated-user-full-name` when the user's SIWC profile has a non-empty
-`name` claim. The full-name value is percent-encoded UTF-8 and is accompanied by
-`oai-authenticated-user-full-name-encoding: percent-encoded-utf-8`.
-
-Treat the full name as optional and fall back to email when it is absent:
-
-```tsx
-import { headers } from "next/headers";
-
-export default async function Home() {
-  const requestHeaders = await headers();
-  const userId = requestHeaders.get("oai-authenticated-user-id");
-  const email = requestHeaders.get("oai-authenticated-user-email");
-  const encodedFullName = requestHeaders.get("oai-authenticated-user-full-name");
-  const fullName =
-    encodedFullName &&
-    requestHeaders.get("oai-authenticated-user-full-name-encoding") ===
-      "percent-encoded-utf-8"
-      ? decodeURIComponent(encodedFullName)
-      : null;
-
-  const displayName = fullName ?? email;
-  // ...
-}
+```text
+http://localhost:3000/auth/callback
+https://your-domain.vercel.app/auth/callback
 ```
 
-## Optional Dispatch-Owned ChatGPT Sign-In
+For production, set the site URL to your deployed domain. Email sign-in must be enabled in the Supabase authentication providers.
 
-Import the ready-to-use helpers from `app/chatgpt-auth.ts` when the site needs
-optional or required ChatGPT sign-in:
+## Deploy on Vercel
 
-- Use `getChatGPTUser()` for optional signed-in UI.
-- Use `requireChatGPTUser(returnTo)` for server-rendered pages that should send
-  anonymous visitors through Sign in with ChatGPT.
-- Use `chatGPTSignInPath(returnTo)` and `chatGPTSignOutPath(returnTo)` for
-  browser links or actions.
-- Pass a same-origin relative `returnTo` path for the destination after sign-in
-  or sign-out. The helper validates and safely encodes it.
-- Mark protected pages with `export const dynamic = "force-dynamic"` because
-  they depend on per-request identity headers.
+1. Import this GitHub repository into Vercel.
+2. Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` as environment variables.
+3. Deploy the project.
+4. Add the production callback URL to Supabase.
 
-Dispatch owns `/signin-with-chatgpt`, `/signout-with-chatgpt`, `/callback`, the
-OAuth cookies, and identity header injection. Do not implement app routes for
-those reserved paths. Routes that do not import and call the helper remain
-anonymous-compatible.
+## Commands
 
-SIWC establishes identity only; it does not prove workspace membership. Use the
-Sites hosting platform's access policy controls for workspace-wide restrictions,
-or enforce explicit server-side membership or allowlist checks.
+```bash
+npm run dev      # Start the development server
+npm run build    # Create a production build
+npm run start    # Start the production server
+npm run lint     # Check the code
+npm test         # Build and run the tests
+```
 
-Use SIWC for account pages, user-specific dashboards, saved records, and write
-actions tied to the current ChatGPT user. Leave public content anonymous.
+## Nederlands
 
-## Useful Commands
+Zoo Journal is een gedeeld dierendagboek voor twee personen. Jullie kunnen samen dierenplekken ontdekken, uitjes plannen, bezoeken registreren, aparte beoordelingen schrijven, ranglijsten vergelijken en herinneringen met foto's bewaren. De app is volledig te gebruiken in het Nederlands en Engels.
 
-- `npm run dev`: start local development
-- `npm run build`: verify the vinext build output
-- `npm test`: build the starter and verify its rendered loading skeleton
-- `npm run db:generate`: generate Drizzle migrations after schema changes
+## Credits
 
-## Learn More
-
-- [vinext Documentation](https://github.com/cloudflare/vinext)
-- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+Animal-place data is enriched with public information from Wikidata and OpenStreetMap contributors. Prices, opening hours, deals and availability can change, so always verify important details with the official location or ticket provider before travelling.
