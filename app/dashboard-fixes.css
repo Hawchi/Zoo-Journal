@@ -3,6 +3,25 @@
 .journal-sidebar .ui-icon{width:32px!important;height:32px!important;object-position:center!important}
 .journal-sidebar nav button{gap:14px}
 @media(min-width:901px){
+  .journal-shell{
+    display:block;
+    min-height:100vh;
+    padding-left:190px;
+  }
+  .journal-sidebar{
+    position:fixed;
+    inset:0 auto 0 0;
+    width:190px;
+    min-height:0;
+    height:100vh;
+    height:100dvh;
+    max-height:none;
+    box-sizing:border-box;
+  }
+  .journal-main{
+    width:100%;
+    margin-left:0;
+  }
   .bottom-nav{
     display:grid!important;
     position:fixed;
