@@ -45,11 +45,11 @@ export function TripWeather({ zoo, date, compact = false }: { zoo: Zoo; date: st
   return <aside className={`trip-weather ${compact ? "compact" : ""}`} aria-live="polite">
     <span className={`weather-mark ${visibleWeather.kind || "cloud"}`} aria-hidden="true"><i /></span>
     <div><small>{t("WEER BIJ", "WEATHER AT")} {zoo.name.toLocaleUpperCase(language)}</small>
-      {visibleWeather.status === "loading" && <><strong>Voorspelling ophalen…</strong><p>Even de locatie en datum controleren.</p></>}
+      {visibleWeather.status === "loading" && <><strong>{t("Voorspelling ophalen…", "Loading forecast…")}</strong><p>{t("Even de locatie en datum controleren.", "Checking the location and date.")}</p></>}
       {visibleWeather.status === "forecast" && <><strong>{Math.round(visibleWeather.maximum || 0)}° / {Math.round(visibleWeather.minimum || 0)}° · {ui(visibleWeather.label || "")}</strong><p>{t(`${visibleWeather.rainChance ?? 0}% kans op neerslag. Ververs bij het openen automatisch.`, `${visibleWeather.rainChance ?? 0}% chance of rain. Refreshes automatically when opened.`)}</p></>}
-      {visibleWeather.status === "too-early" && <><strong>Nog te vroeg voor een voorspelling</strong><p>{t("Het live weer verschijnt vanaf", "The live forecast will appear from")} {shortDate(visibleWeather.availableFrom, language)}.</p></>}
-      {visibleWeather.status === "past" && <><strong>Dit bezoek is al geweest</strong><p>{ui(visibleWeather.message || "")}</p></>}
-      {visibleWeather.status === "unavailable" && <><strong>Het weer is tijdelijk niet bereikbaar</strong><p>{ui(visibleWeather.message || "")}</p>{canLoad && <button type="button" className="weather-retry" onClick={() => setRefreshKey((value) => value + 1)}>Opnieuw proberen</button>}</>}
+      {visibleWeather.status === "too-early" && <><strong>{t("Nog te vroeg voor een voorspelling", "Too early for a forecast")}</strong><p>{t("Het live weer verschijnt vanaf", "The live forecast will appear from")} {shortDate(visibleWeather.availableFrom, language)}.</p></>}
+      {visibleWeather.status === "past" && <><strong>{t("Dit bezoek is al geweest", "This visit has already happened")}</strong><p>{ui(visibleWeather.message || "")}</p></>}
+      {visibleWeather.status === "unavailable" && <><strong>{t("Het weer is tijdelijk niet bereikbaar", "The weather is temporarily unavailable")}</strong><p>{ui(visibleWeather.message || "")}</p>{canLoad && <button type="button" className="weather-retry" onClick={() => setRefreshKey((value) => value + 1)}>{t("Opnieuw proberen", "Try again")}</button>}</>}
     </div>
   </aside>;
 }

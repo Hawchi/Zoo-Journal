@@ -26,7 +26,7 @@ export function VisitDialog({ zoo, visit, onClose, onSave, onRemove }: {
 }) {
   const { language, t } = useLanguage();
   const [date, setDate] = useState(visit?.date || today());
-  const [startPoint, setStartPoint] = useState(visit?.startPoint || "Ons huis");
+  const [startPoint, setStartPoint] = useState(visit?.startPoint || (language === "en" ? "Our home" : "Ons huis"));
   const [originCity, setOriginCity] = useState("");
   const [kilometers, setKilometers] = useState(visit?.kilometers ? String(visit.kilometers) : "");
   const [confirmRemove, setConfirmRemove] = useState(false);
@@ -113,7 +113,7 @@ export function VisitDialog({ zoo, visit, onClose, onSave, onRemove }: {
           <div className="visit-route-actions"><button type="button" className="route-calculate" disabled={routeLoading || !originCity.trim()} onClick={() => void requestDistance({ startCity: originCity.trim() })}>{routeLoading ? t("Route berekenen...", "Calculating route...") : t("Bereken vanaf plaats", "Calculate from city")}</button><button type="button" className="route-current" disabled={routeLoading} onClick={useCurrentLocation}>{t("Gebruik huidige locatie", "Use current location")}</button></div>
           {routeDistance && <div className="visit-route-result" role="status"><span><small>{t("ENKELE REIS", "ONE WAY")}</small><strong>{routeDistance.oneWayKm.toLocaleString(language === "en" ? "en-GB" : "nl-NL")} km</strong></span><span><small>{t("HEEN EN TERUG", "ROUND TRIP")}</small><strong>{routeDistance.roundTripKm.toLocaleString(language === "en" ? "en-GB" : "nl-NL")} km</strong></span><span><small>{t("RIJTIJD ENKEL", "ONE-WAY DRIVE")}</small><strong>{routeDistance.durationMinutes} min</strong></span><p>{t("De retourafstand is hieronder automatisch ingevuld. Start gevonden als", "The round-trip distance has been filled in below. Starting point found as")} {routeDistance.startLabel}.</p></div>}
           {routeError && <p className="visit-route-error" role="alert">{routeError}</p>}
-          <p className="visit-route-privacy">Plaatszoeken gebeurt alleen na jouw tik via <a href="https://operations.osmfoundation.org/policies/nominatim/" target="_blank" rel="noreferrer">OpenStreetMap Nominatim</a>. De autoroute wordt berekend door <a href="https://project-osrm.org/" target="_blank" rel="noreferrer">OSRM</a>. Coördinaten worden niet in jullie dagboek opgeslagen.</p>
+          <p className="visit-route-privacy">{t("Plaatszoeken gebeurt alleen na jouw tik via", "Place lookup only happens after you tap, using")} <a href="https://operations.osmfoundation.org/policies/nominatim/" target="_blank" rel="noreferrer">OpenStreetMap Nominatim</a>. {t("De autoroute wordt berekend door", "The driving route is calculated by")} <a href="https://project-osrm.org/" target="_blank" rel="noreferrer">OSRM</a>. {t("Coördinaten worden niet in jullie dagboek opgeslagen.", "Coordinates are not stored in your journal.")}</p>
         </section>
         <label>{t("Gereden kilometers in totaal", "Total kilometres driven")}<input required type="number" min="0" step="0.1" inputMode="decimal" value={kilometers} onChange={(event) => setKilometers(event.target.value)} placeholder={t("Bijvoorbeeld: 168,5", "For example: 168.5")} /><small>{t("Decimalen zijn toegestaan. Vul de heen- en terugreis samen in.", "Decimals are allowed. Enter the full round trip.")}</small></label>
       </div>

@@ -1091,7 +1091,7 @@ function Planner({ selected, intent, places, trips, currentProfile, partnerProfi
   const profileName = (id?: string | null) => {
     if (id === currentProfile.id) return currentProfile.displayName;
     if (partnerProfile && id === partnerProfile.id) return partnerProfile.displayName;
-    return "je partner";
+    return t("je partner", "your partner");
   };
 
   useEffect(() => {
@@ -1161,30 +1161,30 @@ function Planner({ selected, intent, places, trips, currentProfile, partnerProfi
     <>
       <PageIntro kicker="MAAK ER EEN DAGJE UIT VAN" title="Uitjesplanner" text="Plan de dag, bewaar hem in de kalender en vergeet helemaal niets." animal="tiger" />
 
-      {incomingRequests.length > 0 && <section className="plan-request-inbox" aria-label="Nieuwe voorstellen"><div className="plan-request-heading"><span className="eyebrow">NIEUW VOOR JOU</span><h2>{incomingRequests.length === 1 ? "Je hebt een voorstel" : `Je hebt ${incomingRequests.length} voorstellen`}</h2><p>{partnerProfile?.displayName || "Je partner"} wil graag iets met je plannen. Wat vind jij?</p></div><div className="plan-request-list">{incomingRequests.map((trip) => { const zoo = places.find((place) => place.id === trip.zooId) || places[0]; return <article className="plan-request-card" key={trip.id}><div className="plan-request-animal"><ZooPhoto animal={zoo.animal} alt="" /></div><div><small>{profileName(trip.createdById)} vraagt</small><h3>“Zullen we naar {zoo.name} gaan?”</h3><p>{formatPlannedDate(trip.date, { weekday: "long", day: "numeric", month: "long" }, language)} · {t("vertrek om", "depart at")} {trip.leave}</p>{trip.note && <em>“{trip.note}”</em>}</div><div className="plan-request-actions"><button className="decline" onClick={() => onRespond(trip.id, "declined")}>Liever niet</button><button className="approve" onClick={() => onRespond(trip.id, "approved")}>Ja, leuk! ♥</button></div></article>; })}</div></section>}
+      {incomingRequests.length > 0 && <section className="plan-request-inbox" aria-label={t("Nieuwe voorstellen", "New suggestions")}><div className="plan-request-heading"><span className="eyebrow">{ui("NIEUW VOOR JOU")}</span><h2>{incomingRequests.length === 1 ? ui("Je hebt een voorstel") : t(`Je hebt ${incomingRequests.length} voorstellen`, `You have ${incomingRequests.length} suggestions`)}</h2><p>{t(`${partnerProfile?.displayName || "Je partner"} wil graag iets met je plannen. Wat vind jij?`, `${partnerProfile?.displayName || "Your partner"} would like to plan something with you. What do you think?`)}</p></div><div className="plan-request-list">{incomingRequests.map((trip) => { const zoo = places.find((place) => place.id === trip.zooId) || places[0]; return <article className="plan-request-card" key={trip.id}><div className="plan-request-animal"><ZooPhoto animal={zoo.animal} alt="" /></div><div><small>{t(`${profileName(trip.createdById)} vraagt`, `${profileName(trip.createdById)} asks`)}</small><h3>{t(`“Zullen we naar ${zoo.name} gaan?”`, `“Shall we visit ${zoo.name}?”`)}</h3><p>{formatPlannedDate(trip.date, { weekday: "long", day: "numeric", month: "long" }, language)} · {t("vertrek om", "depart at")} {trip.leave}</p>{trip.note && <em>“{trip.note}”</em>}</div><div className="plan-request-actions"><button className="decline" onClick={() => onRespond(trip.id, "declined")}>{ui("Liever niet")}</button><button className="approve" onClick={() => onRespond(trip.id, "approved")}>{ui("Ja, leuk! ♥")}</button></div></article>; })}</div></section>}
 
       <section className="planner-dashboard">
         <div className="planner-section-heading">
-          <div><span className="eyebrow">ONZE VOLGENDE AVONTUREN</span><h2>Geplande dierendates</h2><p>Alles wat jullie hebben opgeslagen staat hier én in de kalender.</p></div>
-          <button className="planner-new-button" onClick={beginNewTrip}>＋ Nieuwe date</button>
+          <div><span className="eyebrow">{ui("ONZE VOLGENDE AVONTUREN")}</span><h2>{ui("Geplande dierendates")}</h2><p>{ui("Alles wat jullie hebben opgeslagen staat hier én in de kalender.")}</p></div>
+          <button className="planner-new-button" onClick={beginNewTrip}>{t("＋ Nieuwe date", "＋ New date")}</button>
         </div>
         <div className="planner-overview-grid">
           <div className="upcoming-trips">
-            {sortedTrips.length === 0 ? <div className="planner-empty"><span aria-hidden="true">♡</span><h3>Nog geen uitjes gepland</h3><p>Kies een dierenplek en sla jullie eerste avontuur op.</p><button onClick={beginNewTrip}>Plan ons eerste uitje</button></div> : sortedTrips.map((trip) => {
+            {sortedTrips.length === 0 ? <div className="planner-empty"><span aria-hidden="true">♡</span><h3>{ui("Nog geen uitjes gepland")}</h3><p>{ui("Kies een dierenplek en sla jullie eerste avontuur op.")}</p><button onClick={beginNewTrip}>{ui("Plan ons eerste uitje")}</button></div> : sortedTrips.map((trip) => {
               const zoo = places.find((place) => place.id === trip.zooId) || places[0];
               const checked = trip.packing.filter((item) => item.checked).length;
               return <button className="planned-trip-card" key={trip.id} onClick={() => { setActiveTripId(trip.id); setConfirmDelete(false); }}>
                 <span className="planned-trip-date"><b>{new Date(`${trip.date}T12:00:00`).getDate()}</b><small>{formatPlannedDate(trip.date, { month: "short" }, language)}</small></span>
                 <span className="planned-trip-animal"><ZooPhoto animal={zoo.animal} alt="" /></span>
-                <span className="planned-trip-copy"><small>{trip.leave} · vertrek vanaf {trip.start}</small><strong>{zoo.name}</strong><span>{zoo.city} · {zoo.distance} km</span><b className={`trip-status ${trip.approvalStatus || "approved"}`}>{trip.approvalStatus === "pending" ? trip.createdById === currentProfile.id ? `Wacht op ${profileName(trip.requestedFromId)}` : "Jouw antwoord nodig" : trip.approvalStatus === "declined" ? "Afgewezen" : "Samen afgesproken ✓"}</b></span>
-                <span className="planned-trip-progress">{checked}/{trip.packing.length}<small>ingepakt</small></span>
+                <span className="planned-trip-copy"><small>{trip.leave} · {t("vertrek vanaf", "depart from")} {trip.start}</small><strong>{zoo.name}</strong><span>{zoo.city} · {zoo.distance} km</span><b className={`trip-status ${trip.approvalStatus || "approved"}`}>{trip.approvalStatus === "pending" ? trip.createdById === currentProfile.id ? t(`Wacht op ${profileName(trip.requestedFromId)}`, `Waiting for ${profileName(trip.requestedFromId)}`) : t("Jouw antwoord nodig", "Your answer is needed") : trip.approvalStatus === "declined" ? t("Afgewezen", "Declined") : ui("Samen afgesproken ✓")}</b></span>
+                <span className="planned-trip-progress">{checked}/{trip.packing.length}<small>{ui("ingepakt")}</small></span>
                 <i aria-hidden="true">→</i>
               </button>;
             })}
           </div>
 
-          <aside className="planner-calendar-card" aria-label="Kalender met geplande dates">
-            <div className="calendar-heading"><button onClick={() => changeCalendarMonth(-1)} aria-label="Vorige maand">‹</button><h3>{monthLabel}</h3><button onClick={() => changeCalendarMonth(1)} aria-label="Volgende maand">›</button></div>
+          <aside className="planner-calendar-card" aria-label={t("Kalender met geplande dates", "Calendar with planned dates")}>
+            <div className="calendar-heading"><button onClick={() => changeCalendarMonth(-1)} aria-label={ui("Vorige maand")}>‹</button><h3>{monthLabel}</h3><button onClick={() => changeCalendarMonth(1)} aria-label={ui("Volgende maand")}>›</button></div>
             <div className="calendar-weekdays">{(language === "en" ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] : ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"]).map((day) => <span key={day}>{day}</span>)}</div>
             <div className="calendar-days">
               {Array.from({ length: leadingDays }, (_, index) => <span className="calendar-blank" key={`blank-${index}`} />)}
@@ -1195,56 +1195,56 @@ function Planner({ selected, intent, places, trips, currentProfile, partnerProfi
                 return dayTrips.length ? <button className="calendar-day has-trip" key={dateKey} onClick={() => { setActiveTripId(dayTrips[0].id); setConfirmDelete(false); }} aria-label={t(`${dayTrips.length} geplande date op ${formatPlannedDate(dateKey, undefined, language)}`, `${dayTrips.length} planned date on ${formatPlannedDate(dateKey, undefined, language)}`)}><span>{day}</span><i>{dayTrips.length > 1 ? dayTrips.length : "♥"}</i></button> : <span className="calendar-day" key={dateKey}><span>{day}</span></span>;
               })}
             </div>
-            <p className="calendar-legend"><i /> Geplande zoo date · klik voor het hele plan</p>
+            <p className="calendar-legend"><i /> {ui("Geplande zoo date · klik voor het hele plan")}</p>
           </aside>
         </div>
       </section>
 
       <section className="planner-editor" ref={editorRef}>
-        <div className="planner-section-heading compact"><div><span className="eyebrow">{editingId ? "PAS ONS UITJE AAN" : "PLAN IETS WILDS"}</span><h2>{editingId ? "Uitje aanpassen" : "Nieuw uitje plannen"}</h2></div></div>
+        <div className="planner-section-heading compact"><div><span className="eyebrow">{editingId ? t("PAS ONS UITJE AAN", "EDIT OUR TRIP") : t("PLAN IETS WILDS", "PLAN SOMETHING WILD")}</span><h2>{editingId ? t("Uitje aanpassen", "Edit trip") : ui("Nieuw uitje plannen")}</h2></div></div>
         <div className="planner-layout">
           <form className="paper-form" onSubmit={submitTrip}>
-            <label>Dierentuin<select value={zooId} onChange={(event) => setZooId(event.target.value)}>{places.map((zoo) => <option value={zoo.id} key={zoo.id}>{zoo.name}</option>)}</select></label>
+            <label>{t("Dierenplek", "Animal place")}<select value={zooId} onChange={(event) => setZooId(event.target.value)}>{places.map((zoo) => <option value={zoo.id} key={zoo.id}>{zoo.name}</option>)}</select></label>
             <TripWeather zoo={chosen} date={date} />
             <div className="form-row">
-              <label>Datum<input required type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label>
-              <label>Vertrektijd<input required type="time" value={leave} onChange={(event) => setLeave(event.target.value)} /></label>
+              <label>{ui("Datum")}<input required type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label>
+              <label>{ui("Vertrektijd")}<input required type="time" value={leave} onChange={(event) => setLeave(event.target.value)} /></label>
             </div>
-            <label>Startpunt<input required value={start} onChange={(event) => setStart(event.target.value)} /></label>
+            <label>{ui("Startpunt")}<input required value={start} onChange={(event) => setStart(event.target.value)} /></label>
             <div className="form-row">
-              <label>Budget<input type="number" min={0} value={budget} onChange={(event) => setBudget(Number(event.target.value))} /></label>
-              <label>Tickets<select value={tickets} onChange={(event) => changeTickets(event.target.value as "nee" | "ja")}><option value="nee">Nog niet gekocht</option><option value="ja">Gekocht</option></select></label>
+              <label>{ui("Budget")}<input type="number" min={0} value={budget} onChange={(event) => setBudget(Number(event.target.value))} /></label>
+              <label>{ui("Tickets")}<select value={tickets} onChange={(event) => changeTickets(event.target.value as "nee" | "ja")}><option value="nee">{ui("Nog niet gekocht")}</option><option value="ja">{ui("Gekocht")}</option></select></label>
             </div>
-            <div className="budget-summary"><span>Jullie ingestelde budget</span><strong>€{budget.toFixed(2).replace(".", ",")}</strong><span className="ok">zelf bepaald</span></div>
-            <label>Kleine notitie<textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Picknick meenemen, bijpassende outfits…" /></label>
-            {partnerProfile && <label className="partner-request-toggle"><input type="checkbox" checked={requestApproval} onChange={(event) => setRequestApproval(event.target.checked)} /><span><strong>Vraag {partnerProfile.displayName} om goedkeuring</strong><small>Er verschijnt een voorstel in het andere account.</small></span></label>}
-            <div className="planner-form-actions">{editingId && <button type="button" className="secondary" onClick={() => resetForm()}>Annuleren</button>}<button className="primary">{editingId ? wantsPartnerApproval ? "Wijziging voorstellen ♥" : "Wijzigingen opslaan ♥" : wantsPartnerApproval ? `Voorstel sturen naar ${partnerProfile?.displayName} ♥` : "Uitje opslaan ♥"}</button></div>
-            {done && <p className="success">✓ {wantsPartnerApproval ? `Voorstel verstuurd naar ${partnerProfile?.displayName}.` : "Uitje staat in jullie kalender!"}</p>}
+            <div className="budget-summary"><span>{ui("Jullie ingestelde budget")}</span><strong>€{budget.toFixed(2).replace(".", ",")}</strong><span className="ok">{ui("zelf bepaald")}</span></div>
+            <label>{ui("Kleine notitie")}<textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder={t("Picknick meenemen, bijpassende outfits…", "Bring a picnic, matching outfits…")} /></label>
+            {partnerProfile && <label className="partner-request-toggle"><input type="checkbox" checked={requestApproval} onChange={(event) => setRequestApproval(event.target.checked)} /><span><strong>{t(`Vraag ${partnerProfile.displayName} om goedkeuring`, `Ask ${partnerProfile.displayName} for approval`)}</strong><small>{ui("Er verschijnt een voorstel in het andere account.")}</small></span></label>}
+            <div className="planner-form-actions">{editingId && <button type="button" className="secondary" onClick={() => resetForm()}>{ui("Annuleren")}</button>}<button className="primary">{editingId ? wantsPartnerApproval ? ui("Wijziging voorstellen ♥") : ui("Wijzigingen opslaan ♥") : wantsPartnerApproval ? t(`Voorstel sturen naar ${partnerProfile?.displayName} ♥`, `Send suggestion to ${partnerProfile?.displayName} ♥`) : ui("Uitje opslaan ♥")}</button></div>
+            {done && <p className="success">✓ {wantsPartnerApproval ? t(`Voorstel verstuurd naar ${partnerProfile?.displayName}.`, `Suggestion sent to ${partnerProfile?.displayName}.`) : t("Uitje staat in jullie kalender!", "Your trip is in the calendar!")}</p>}
           </form>
 
           <div className="planner-side">
-            <aside className="itinerary-card"><span className="eyebrow">DAGPLANNING</span><h2>Het plan</h2><ol className="itinerary-list">{draftItinerary.map(([time, label]) => <li key={label}><span className="time">{time}</span><span>{label}</span></li>)}</ol></aside>
-            <aside className="checklist"><span className="eyebrow">INPAKLIJST</span><h2>Niet vergeten</h2>{packing.map((item) => <label key={item.id}><input type="checkbox" checked={item.checked} onChange={() => setPacking((current) => current.map((entry) => entry.id === item.id ? { ...entry, checked: !entry.checked } : entry))} /><span>{ui(item.label)}</span></label>)}</aside>
+            <aside className="itinerary-card"><span className="eyebrow">{ui("DAGPLANNING")}</span><h2>{ui("Het plan")}</h2><ol className="itinerary-list">{draftItinerary.map(([time, label]) => <li key={label}><span className="time">{time}</span><span>{label}</span></li>)}</ol></aside>
+            <aside className="checklist"><span className="eyebrow">{ui("INPAKLIJST")}</span><h2>{ui("Niet vergeten")}</h2>{packing.map((item) => <label key={item.id}><input type="checkbox" checked={item.checked} onChange={() => setPacking((current) => current.map((entry) => entry.id === item.id ? { ...entry, checked: !entry.checked } : entry))} /><span>{ui(item.label)}</span></label>)}</aside>
           </div>
         </div>
       </section>
 
       {activeTrip && activeZoo && <div className="trip-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setActiveTripId(null); }}>
         <section className="trip-modal" role="dialog" aria-modal="true" aria-labelledby="trip-modal-title">
-          <button className="trip-modal-close" onClick={() => setActiveTripId(null)} aria-label="Planning sluiten">×</button>
-          <header className="trip-modal-header"><div className="trip-modal-animal"><ZooPhoto animal={activeZoo.animal} alt="" /></div><div><span className="eyebrow">GEPLAND DIERENUITJE</span><h2 id="trip-modal-title">{activeZoo.name}</h2><p>{formatPlannedDate(activeTrip.date, { weekday: "long", day: "numeric", month: "long", year: "numeric" }, language)} · {t("vertrek om", "depart at")} {activeTrip.leave}</p></div></header>
-          <div className={`trip-approval-banner ${activeTrip.approvalStatus || "approved"}`}>{activeTrip.approvalStatus === "pending" ? canRespondToActive ? <><span><b>{profileName(activeTrip.createdById)} heeft dit voorgesteld</b><small>Wil je dit samen plannen?</small></span><div><button onClick={() => onRespond(activeTrip.id, "declined")}>Liever niet</button><button className="approve" onClick={() => onRespond(activeTrip.id, "approved")}>Ja, leuk! ♥</button></div></> : <span><b>Voorstel verstuurd</b><small>Wacht op het antwoord van {profileName(activeTrip.requestedFromId)}.</small></span> : activeTrip.approvalStatus === "declined" ? <span><b>Dit voorstel is afgewezen</b><small>De maker kan het aanpassen en opnieuw voorstellen.</small></span> : <span><b>Samen afgesproken ✓</b><small>Dit uitje staat in jullie kalender.</small></span>}</div>
-          <div className="trip-modal-facts"><span><small>Startpunt</small><strong>{activeTrip.start}</strong></span><span><small>Budget</small><strong>€{activeTrip.budget}</strong></span><span><small>Tickets</small><strong>{activeTrip.tickets === "ja" ? "Gekocht ✓" : "Nog kopen"}</strong></span></div>
+          <button className="trip-modal-close" onClick={() => setActiveTripId(null)} aria-label={ui("Planning sluiten")}>×</button>
+          <header className="trip-modal-header"><div className="trip-modal-animal"><ZooPhoto animal={activeZoo.animal} alt="" /></div><div><span className="eyebrow">{ui("GEPLAND DIERENUITJE")}</span><h2 id="trip-modal-title">{activeZoo.name}</h2><p>{formatPlannedDate(activeTrip.date, { weekday: "long", day: "numeric", month: "long", year: "numeric" }, language)} · {t("vertrek om", "depart at")} {activeTrip.leave}</p></div></header>
+          <div className={`trip-approval-banner ${activeTrip.approvalStatus || "approved"}`}>{activeTrip.approvalStatus === "pending" ? canRespondToActive ? <><span><b>{t(`${profileName(activeTrip.createdById)} heeft dit voorgesteld`, `${profileName(activeTrip.createdById)} suggested this`)}</b><small>{ui("Wil je dit samen plannen?")}</small></span><div><button onClick={() => onRespond(activeTrip.id, "declined")}>{ui("Liever niet")}</button><button className="approve" onClick={() => onRespond(activeTrip.id, "approved")}>{ui("Ja, leuk! ♥")}</button></div></> : <span><b>{ui("Voorstel verstuurd")}</b><small>{t(`Wacht op het antwoord van ${profileName(activeTrip.requestedFromId)}.`, `Waiting for ${profileName(activeTrip.requestedFromId)}'s answer.`)}</small></span> : activeTrip.approvalStatus === "declined" ? <span><b>{ui("Dit voorstel is afgewezen")}</b><small>{ui("De maker kan het aanpassen en opnieuw voorstellen.")}</small></span> : <span><b>{ui("Samen afgesproken ✓")}</b><small>{ui("Dit uitje staat in jullie kalender.")}</small></span>}</div>
+          <div className="trip-modal-facts"><span><small>{ui("Startpunt")}</small><strong>{activeTrip.start}</strong></span><span><small>{ui("Budget")}</small><strong>€{activeTrip.budget}</strong></span><span><small>{ui("Tickets")}</small><strong>{activeTrip.tickets === "ja" ? t("Gekocht ✓", "Purchased ✓") : ui("Nog kopen")}</strong></span></div>
           <TripWeather zoo={activeZoo} date={activeTrip.date} compact />
-          <div className="route-action-links trip-route-links"><a href={googleMapsDirectionsUrl(activeZoo)} target="_blank" rel="noreferrer">Route in Google Maps</a><a href={wazeDirectionsUrl(activeZoo)} target="_blank" rel="noreferrer">Open in Waze</a></div>
+          <div className="route-action-links trip-route-links"><a href={googleMapsDirectionsUrl(activeZoo)} target="_blank" rel="noreferrer">{ui("Route in Google Maps")}</a><a href={wazeDirectionsUrl(activeZoo)} target="_blank" rel="noreferrer">{ui("Open in Waze")}</a></div>
           {activeTrip.note && <p className="trip-modal-note">“{activeTrip.note}”</p>}
           <div className="trip-modal-grid">
-            <div><span className="eyebrow">DAGPLANNING</span><h3>Dit gaan we doen</h3><ol className="itinerary-list">{tripItinerary(activeTrip, activeZoo, language).map(([time, label]) => <li key={label}><span className="time">{time}</span><span>{label}</span></li>)}</ol></div>
-            <div><span className="eyebrow">INPAKLIJST</span><h3>Klaar voor vertrek?</h3><div className="trip-modal-checklist">{activeTrip.packing.map((item) => <label key={item.id}><input type="checkbox" checked={item.checked} onChange={() => onTogglePacking(activeTrip.id, item.id)} /><span>{ui(item.label)}</span></label>)}</div></div>
+            <div><span className="eyebrow">{ui("DAGPLANNING")}</span><h3>{ui("Dit gaan we doen")}</h3><ol className="itinerary-list">{tripItinerary(activeTrip, activeZoo, language).map(([time, label]) => <li key={label}><span className="time">{time}</span><span>{label}</span></li>)}</ol></div>
+            <div><span className="eyebrow">{ui("INPAKLIJST")}</span><h3>{ui("Klaar voor vertrek?")}</h3><div className="trip-modal-checklist">{activeTrip.packing.map((item) => <label key={item.id}><input type="checkbox" checked={item.checked} onChange={() => onTogglePacking(activeTrip.id, item.id)} /><span>{ui(item.label)}</span></label>)}</div></div>
           </div>
           <footer className="trip-modal-actions">
-            {canManageActive && (confirmDelete ? <div className="trip-delete-confirm"><span>Deze planning verwijderen?</span><button onClick={() => setConfirmDelete(false)}>Nee</button><button className="danger" onClick={() => { onDelete(activeTrip.id); setActiveTripId(null); setConfirmDelete(false); }}>Ja, verwijderen</button></div> : <button className="trip-delete-button" onClick={() => setConfirmDelete(true)}>Verwijderen</button>)}
-            {canManageActive && <button className="secondary" onClick={() => beginEditTrip(activeTrip)}>✎ Planning aanpassen</button>}
+            {canManageActive && (confirmDelete ? <div className="trip-delete-confirm"><span>{ui("Deze planning verwijderen?")}</span><button onClick={() => setConfirmDelete(false)}>{ui("Nee")}</button><button className="danger" onClick={() => { onDelete(activeTrip.id); setActiveTripId(null); setConfirmDelete(false); }}>{ui("Ja, verwijderen")}</button></div> : <button className="trip-delete-button" onClick={() => setConfirmDelete(true)}>{ui("Verwijderen")}</button>)}
+            {canManageActive && <button className="secondary" onClick={() => beginEditTrip(activeTrip)}>✎ {ui("Planning aanpassen")}</button>}
           </footer>
         </section>
       </div>}
