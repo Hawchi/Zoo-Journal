@@ -22,25 +22,7 @@
     width:100%;
     margin-left:0;
   }
-  .bottom-nav{
-    display:grid!important;
-    position:fixed;
-    z-index:60;
-    left:calc(50% + 95px);
-    right:auto;
-    top:auto!important;
-    bottom:18px!important;
-    transform:translateX(-50%);
-    width:min(660px,calc(100% - 240px));
-    height:74px;
-    grid-template-columns:repeat(6,minmax(0,1fr));
-    justify-content:stretch;
-    padding:6px 8px;
-    border-radius:25px;
-  }
-  .bottom-nav button{min-width:0;width:100%;padding:4px 7px}
-  .bottom-nav .nav-label{font-size:10px;white-space:nowrap}
-  .journal-main{padding-bottom:124px}
+  .bottom-nav{display:none!important}
 }
 .recent-panel{background:rgba(255,250,241,.72)!important;border-color:#e4d8c5!important;padding:18px!important}
 .memory-row{gap:14px!important;align-items:start}
