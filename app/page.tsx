@@ -1344,6 +1344,7 @@ function Rankings({
   const [note, setNote] = useState("");
   const [scores, setScores] = useState<ReviewScores>(emptyScores);
   const [savedMessage, setSavedMessage] = useState("");
+  const [detailZooId, setDetailZooId] = useState<string | null>(null);
   const profileInitials = profiles.slice(0, 2).map((profile) => profile.displayName.trim().charAt(0).toLocaleUpperCase("nl")).filter(Boolean);
   const togetherInitials = profileInitials.length > 1 ? profileInitials.join("+") : `${profileInitials[0] || "A"}+?`;
   const translatedRankingTabs = rankingTabs.map((item) => ({
@@ -1392,6 +1393,15 @@ function Rankings({
     .sort((a, b) => b.scores[metric] - a.scores[metric]);
 
   const setScore = (key: RankKey, value: number) => setScores((current) => ({ ...current, [key]: value }));
+  const detailZoo = detailZooId ? places.find((zoo) => zoo.id === detailZooId) : undefined;
+  const detailReviews = detailZoo
+    ? (reviews[detailZoo.id] || []).filter((review) => scope === "together" || review.userId === scope)
+    : [];
+  const detailAverage = averageReviewScores(detailReviews);
+  const formatReviewDate = (date: string) => {
+    if (!date) return t("Datum niet ingevuld", "Date not provided");
+    return new Intl.DateTimeFormat(language === "en" ? "en-GB" : "nl-NL", { day: "numeric", month: "long", year: "numeric" }).format(new Date(`${date}T12:00:00`));
+  };
   const submitReview = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const currentZoo = places.find((zoo) => zoo.id === zooId);
@@ -1495,10 +1505,49 @@ function Rankings({
               {zooScores[metric].toFixed(1)}
               <small>/ 10</small>
             </strong>
-            <button className="rank-review-button" onClick={() => beginReview(z.id)}>{ownReview ? t("Mijn review wijzigen", "Edit my review") : t("Zelf beoordelen", "Add my review")}</button>
+            <div className="review-row-actions">
+              <button className="rank-open-button" onClick={() => setDetailZooId(z.id)}>{t("Bekijken", "View")}</button>
+              <button className="rank-review-button" onClick={() => beginReview(z.id)}>{ownReview ? t("Mijn review wijzigen", "Edit my review") : t("Zelf beoordelen", "Add my review")}</button>
+            </div>
           </article>
         )})}
       </section>
+      {detailZoo && (
+        <div className="review-detail-backdrop" role="presentation" onMouseDown={() => setDetailZooId(null)}>
+          <section className="review-read-dialog" role="dialog" aria-modal="true" aria-labelledby="review-read-title" onMouseDown={(event) => event.stopPropagation()}>
+            <header className="review-read-heading">
+              <div>
+                <span className="eyebrow">{t("ONZE BEOORDELING", "OUR REVIEW")}</span>
+                <h2 id="review-read-title">{detailZoo.name}</h2>
+                <p>{detailZoo.city} · {detailReviews.length} {detailReviews.length === 1 ? t("beoordeling", "review") : t("beoordelingen", "reviews")}</p>
+              </div>
+              {detailAverage && <strong>{detailAverage.overall.toFixed(1)}<small>/ 10</small></strong>}
+              <button className="review-close" onClick={() => setDetailZooId(null)} aria-label={t("Beoordeling sluiten", "Close review")}>×</button>
+            </header>
+            <div className="review-read-list">
+              {detailReviews.map((review) => (
+                <article className="review-read-card" key={review.userId}>
+                  <div className="review-read-person">
+                    <span className="review-owner-avatar">{profileName(review.userId).slice(0, 1).toLocaleUpperCase(language)}</span>
+                    <div><h3>{profileName(review.userId)}</h3><time>{formatReviewDate(review.visitDate)}</time></div>
+                    <strong>{review.scores.overall.toFixed(1)}<small>/ 10</small></strong>
+                  </div>
+                  <p className="review-read-note">{review.note || t("Geen beschrijving toegevoegd.", "No description added.")}</p>
+                  <dl className="review-score-list">
+                    {translatedRankingTabs.map((item) => <div key={item.key}><dt>{item.label}</dt><dd>{review.scores[item.key].toFixed(1)}</dd></div>)}
+                  </dl>
+                </article>
+              ))}
+            </div>
+            <footer className="review-read-actions">
+              <button className="review-cancel" onClick={() => setDetailZooId(null)}>{t("Sluiten", "Close")}</button>
+              <button className="primary" onClick={() => { setDetailZooId(null); beginReview(detailZoo.id); }}>
+                {reviewForUser(reviews[detailZoo.id], currentProfile.id) ? t("Mijn review wijzigen", "Edit my review") : t("Mijn review toevoegen", "Add my review")}
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
     </>
   );
 }
